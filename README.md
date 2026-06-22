@@ -86,6 +86,7 @@ The preview buttons switch the canvas into simulated or packed preview. Selectin
 - Pixel-boundary toggle every three subpixel columns
 
 The canvas is scrollable, which provides practical panning for zoomed-in documents.
+Subpix remembers local workspace preferences, including selected tool, display profile, zoom, grid visibility, and pixel-boundary visibility.
 
 ## Validation
 

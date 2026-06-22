@@ -24,6 +24,14 @@ import { createPackedPngBytes } from "@/format/exportPng";
 import { loadSubpix, SubpixLoadError } from "@/format/loadSubpix";
 import { saveSubpix } from "@/format/saveSubpix";
 import {
+  MAX_ZOOM,
+  MIN_ZOOM,
+  ZOOM_STEP,
+  clampZoom,
+  readAppPreferences,
+  writeAppPreferences
+} from "@/state/appPreferences";
+import {
   canUsePackedPreview,
   DEFAULT_DOCUMENT_FILE_NAME,
   DEFAULT_DOCUMENT_NAME,
@@ -53,6 +61,11 @@ const PREVIEW_MODES: Array<{ id: Exclude<ViewMode, "grid">; label: string }> = [
   { id: "packed", label: "Packed" }
 ];
 
+const TOOL_LABELS: Record<Tool, string> = {
+  brush: "Brush",
+  eraser: "Eraser"
+};
+
 interface NewDocumentDraft {
   name: string;
   widthPixels: string;
@@ -77,15 +90,25 @@ function formatError(error: unknown): string {
   return String(error);
 }
 
+function isEditableKeyboardTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  );
+}
+
 export function App(): ReactElement {
   const { state, actions } = useDocumentStore();
+  const initialPreferences = useMemo(() => readAppPreferences(), []);
   const isDirtyRef = useRef(state.isDirty);
-  const [tool, setTool] = useState<Tool>("brush");
+  const [tool, setTool] = useState<Tool>(initialPreferences.tool);
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
-  const [displayProfile, setDisplayProfile] = useState<DisplayProfileId>("rgb-horizontal");
-  const [zoom, setZoom] = useState(12);
-  const [showGrid, setShowGrid] = useState(true);
-  const [showPixelBoundaries, setShowPixelBoundaries] = useState(true);
+  const [displayProfile, setDisplayProfile] = useState<DisplayProfileId>(initialPreferences.displayProfile);
+  const [zoom, setZoom] = useState(initialPreferences.zoom);
+  const [showGrid, setShowGrid] = useState(initialPreferences.showGrid);
+  const [showPixelBoundaries, setShowPixelBoundaries] = useState(initialPreferences.showPixelBoundaries);
   const [statusMessage, setStatusMessage] = useState("Ready.");
   const [isNewDocumentDialogOpen, setIsNewDocumentDialogOpen] = useState(false);
   const [newDocumentDraft, setNewDocumentDraft] = useState<NewDocumentDraft>(DEFAULT_NEW_DOCUMENT_DRAFT);
@@ -121,6 +144,16 @@ export function App(): ReactElement {
   useEffect(() => {
     window.document.title = windowTitle;
   }, [windowTitle]);
+
+  useEffect(() => {
+    writeAppPreferences({
+      displayProfile,
+      showGrid,
+      showPixelBoundaries,
+      tool,
+      zoom
+    });
+  }, [displayProfile, showGrid, showPixelBoundaries, tool, zoom]);
 
   useEffect(() => {
     let disposed = false;
@@ -170,26 +203,79 @@ export function App(): ReactElement {
     function handleKeyDown(event: KeyboardEvent): void {
       const key = event.key.toLowerCase();
       const commandKey = event.ctrlKey || event.metaKey;
+      const editableTarget = isEditableKeyboardTarget(event.target);
 
-      if (!commandKey) {
+      if (key === "escape") {
+        if (isNewDocumentDialogOpen) {
+          event.preventDefault();
+          setIsNewDocumentDialogOpen(false);
+          return;
+        }
+
+        if (!editableTarget && viewMode !== "grid") {
+          event.preventDefault();
+          setViewMode("grid");
+          setStatusMessage("Returned to drawing grid.");
+        }
+      }
+
+      if (commandKey) {
+        if (editableTarget && key !== "s") {
+          return;
+        }
+
+        if (key === "z" && !event.shiftKey) {
+          event.preventDefault();
+          actions.undo();
+        } else if (key === "y" || (key === "z" && event.shiftKey)) {
+          event.preventDefault();
+          actions.redo();
+        } else if (key === "s") {
+          event.preventDefault();
+          void handleSave(event.shiftKey);
+        } else if (key === "o") {
+          event.preventDefault();
+          void handleOpen();
+        } else if (key === "n") {
+          event.preventDefault();
+          handleNew();
+        }
+
         return;
       }
 
-      if (key === "z" && !event.shiftKey) {
+      if (event.altKey || editableTarget) {
+        return;
+      }
+
+      if (key === "b") {
         event.preventDefault();
-        actions.undo();
-      } else if (key === "y" || (key === "z" && event.shiftKey)) {
+        selectTool("brush");
+      } else if (key === "e") {
         event.preventDefault();
-        actions.redo();
-      } else if (key === "s") {
+        selectTool("eraser");
+      } else if (key === "g") {
         event.preventDefault();
-        void handleSave(event.shiftKey);
-      } else if (key === "o") {
+        toggleGrid();
+      } else if (key === "p") {
         event.preventDefault();
-        void handleOpen();
-      } else if (key === "n") {
+        togglePixelBoundaries();
+      } else if (key === "=" || key === "+") {
         event.preventDefault();
-        handleNew();
+        adjustZoom(zoom + ZOOM_STEP);
+      } else if (key === "-") {
+        event.preventDefault();
+        adjustZoom(zoom - ZOOM_STEP);
+      } else if (key === "1") {
+        event.preventDefault();
+        setViewMode("grid");
+        setStatusMessage("Drawing grid selected.");
+      } else if (key === "2") {
+        event.preventDefault();
+        setPreviewMode("simulated");
+      } else if (key === "3") {
+        event.preventDefault();
+        setPreviewMode("packed");
       }
     }
 
@@ -204,6 +290,35 @@ export function App(): ReactElement {
 
     return displayProfile === "bgr-horizontal" ? "BGR compatible" : "Compatible";
   }, [displayProfile, packedAvailable]);
+
+  function selectTool(nextTool: Tool): void {
+    setTool(nextTool);
+    setViewMode("grid");
+    setStatusMessage(`${TOOL_LABELS[nextTool]} selected.`);
+  }
+
+  function setPreviewMode(nextMode: Exclude<ViewMode, "grid">): void {
+    if (nextMode === "packed" && !packedAvailable) {
+      setStatusMessage("Packed preview is disabled for the selected display profile.");
+      return;
+    }
+
+    const resolvedMode = viewMode === nextMode ? "grid" : nextMode;
+    setViewMode(resolvedMode);
+    setStatusMessage(resolvedMode === "grid" ? "Returned to drawing grid." : `${nextMode === "packed" ? "Packed" : "Simulated"} preview.`);
+  }
+
+  function toggleGrid(): void {
+    const nextValue = !showGrid;
+    setShowGrid(nextValue);
+    setStatusMessage(`Grid ${nextValue ? "shown" : "hidden"}.`);
+  }
+
+  function togglePixelBoundaries(): void {
+    const nextValue = !showPixelBoundaries;
+    setShowPixelBoundaries(nextValue);
+    setStatusMessage(`Pixel boundaries ${nextValue ? "shown" : "hidden"}.`);
+  }
 
   function confirmDiscardDirty(): boolean {
     return !state.isDirty || window.confirm("Discard unsaved changes?");
@@ -315,7 +430,9 @@ export function App(): ReactElement {
   }
 
   function adjustZoom(nextZoom: number): void {
-    setZoom(Math.max(3, Math.min(40, nextZoom)));
+    const clampedZoom = clampZoom(nextZoom);
+    setZoom(clampedZoom);
+    setStatusMessage(`Zoom set to ${clampedZoom}px.`);
   }
 
   return (
@@ -368,11 +485,11 @@ export function App(): ReactElement {
           <button className="icon-button" title="Redo" onClick={actions.redo} disabled={state.future.length === 0}>
             <Redo2 size={17} />
           </button>
-          <button className="icon-button" title="Zoom out" onClick={() => adjustZoom(zoom - 2)}>
+          <button className="icon-button" title="Zoom out (-)" onClick={() => adjustZoom(zoom - ZOOM_STEP)} disabled={zoom <= MIN_ZOOM}>
             <ZoomOut size={17} />
           </button>
           <span className="zoom-readout">{zoom}px</span>
-          <button className="icon-button" title="Zoom in" onClick={() => adjustZoom(zoom + 2)}>
+          <button className="icon-button" title="Zoom in (+)" onClick={() => adjustZoom(zoom + ZOOM_STEP)} disabled={zoom >= MAX_ZOOM}>
             <ZoomIn size={17} />
           </button>
         </div>
@@ -383,7 +500,7 @@ export function App(): ReactElement {
               key={mode.id}
               className={viewMode === mode.id ? "is-selected" : ""}
               aria-pressed={viewMode === mode.id}
-              onClick={() => setViewMode((currentMode) => (currentMode === mode.id ? "grid" : mode.id))}
+              onClick={() => setPreviewMode(mode.id)}
               disabled={mode.id === "packed" && !packedAvailable}
             >
               {mode.label}
@@ -415,23 +532,17 @@ export function App(): ReactElement {
       <aside className="left-toolbar" aria-label="Tools">
         <button
           className={tool === "brush" ? "tool-button is-selected" : "tool-button"}
-          title="Brush"
+          title="Brush (B)"
           aria-pressed={tool === "brush"}
-          onClick={() => {
-            setTool("brush");
-            setViewMode("grid");
-          }}
+          onClick={() => selectTool("brush")}
         >
           <Brush size={20} />
         </button>
         <button
           className={tool === "eraser" ? "tool-button is-selected" : "tool-button"}
-          title="Eraser"
+          title="Eraser (E)"
           aria-pressed={tool === "eraser"}
-          onClick={() => {
-            setTool("eraser");
-            setViewMode("grid");
-          }}
+          onClick={() => selectTool("eraser")}
         >
           <Eraser size={20} />
         </button>
@@ -441,17 +552,17 @@ export function App(): ReactElement {
         <div className="toolbar-divider" />
         <button
           className={showGrid ? "tool-button is-selected" : "tool-button"}
-          title="Toggle grid"
+          title="Toggle grid (G)"
           aria-pressed={showGrid}
-          onClick={() => setShowGrid((value) => !value)}
+          onClick={toggleGrid}
         >
           <Grid2X2 size={20} />
         </button>
         <button
           className={showPixelBoundaries ? "tool-button is-selected" : "tool-button"}
-          title="Toggle pixel boundaries"
+          title="Toggle pixel boundaries (P)"
           aria-pressed={showPixelBoundaries}
-          onClick={() => setShowPixelBoundaries((value) => !value)}
+          onClick={togglePixelBoundaries}
         >
           {showPixelBoundaries ? <Eye size={20} /> : <EyeOff size={20} />}
         </button>
@@ -542,6 +653,32 @@ export function App(): ReactElement {
             <div>
               <dt>Display</dt>
               <dd>{getDisplayProfileLabel(displayProfile)}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <section className="panel-section">
+          <h2>Workspace</h2>
+          <dl>
+            <div>
+              <dt>Tool</dt>
+              <dd>{TOOL_LABELS[tool]}</dd>
+            </div>
+            <div>
+              <dt>Mode</dt>
+              <dd>{activeViewLabel}</dd>
+            </div>
+            <div>
+              <dt>Zoom</dt>
+              <dd>{zoom}px</dd>
+            </div>
+            <div>
+              <dt>Grid</dt>
+              <dd>{showGrid ? "Shown" : "Hidden"}</dd>
+            </div>
+            <div>
+              <dt>Boundaries</dt>
+              <dd>{showPixelBoundaries ? "Shown" : "Hidden"}</dd>
             </div>
           </dl>
         </section>
@@ -651,7 +788,7 @@ export function App(): ReactElement {
       <footer className="status-bar" role="status">
         <span>{statusMessage}</span>
         <span>
-          {activeViewLabel} / {state.isDirty ? "Unsaved changes" : "Saved"}
+          {activeViewLabel} / {TOOL_LABELS[tool]} / {state.isDirty ? "Unsaved changes" : "Saved"}
         </span>
       </footer>
     </div>
