@@ -23,6 +23,7 @@ import { SubpixelCanvas } from "@/canvas/SubpixelCanvas";
 import { getDesktopApi, isDesktopRuntime } from "@/app/desktopApi";
 import type { DesktopAppCommand } from "@/app/desktopApiTypes";
 import { getSubpixDocumentStats } from "@/format/documentStats";
+import { getExportReadiness } from "@/format/exportReadiness";
 import { createPackedPngBytes } from "@/format/exportPng";
 import { loadSubpix, SubpixLoadError } from "@/format/loadSubpix";
 import { getSubpixPattern, SUBPIX_PATTERNS, type SubpixPatternId } from "@/format/patterns";
@@ -130,6 +131,7 @@ export function App(): ReactElement {
   const suggestedBaseName = baseNameFromPath(state.filePath) || document.document.name || "Untitled";
   const fileLabel = ensureSubpixFileName(suggestedBaseName);
   const documentStats = useMemo(() => getSubpixDocumentStats(document, renderOrder), [document, renderOrder]);
+  const exportReadiness = useMemo(() => getExportReadiness(document, displayProfile), [displayProfile, document]);
   const activeViewLabel =
     viewMode === "grid" ? "Drawing grid" : viewMode === "simulated" ? "Simulated preview" : "Packed preview";
   const windowTitle = `${state.isDirty ? "*" : ""}${ensureSubpixFileName(suggestedBaseName)} - Subpix`;
@@ -741,6 +743,41 @@ export function App(): ReactElement {
               <dd>{getDisplayProfileLabel(displayProfile)}</dd>
             </div>
           </dl>
+        </section>
+
+        <section className={`panel-section export-readiness export-readiness--${exportReadiness.status}`}>
+          <div className="section-title-row">
+            <h2>Export</h2>
+            <span>{exportReadiness.statusLabel}</span>
+          </div>
+          <dl>
+            <div>
+              <dt>PNG size</dt>
+              <dd>
+                {exportReadiness.outputWidthPixels} x {exportReadiness.outputHeightPixels}
+              </dd>
+            </div>
+            <div>
+              <dt>Pixels</dt>
+              <dd>{exportReadiness.outputPixelCount.toLocaleString()}</dd>
+            </div>
+            <div>
+              <dt>RGBA bytes</dt>
+              <dd>{exportReadiness.outputByteCount.toLocaleString()}</dd>
+            </div>
+            <div>
+              <dt>Order</dt>
+              <dd>{exportReadiness.renderOrder}</dd>
+            </div>
+          </dl>
+          <div className="slot-map" aria-label="Export slot mapping">
+            {exportReadiness.slotMappings.map((mapping) => (
+              <span className={`slot-map__item slot-map__item--${mapping.channel.toLowerCase()}`} key={mapping.slot}>
+                S{mapping.slot} {"->"} {mapping.channel}
+              </span>
+            ))}
+          </div>
+          <p>{exportReadiness.message}</p>
         </section>
 
         <section className="panel-section">

@@ -75,6 +75,7 @@ The app includes three display profile options:
 
 The preview buttons switch the canvas into simulated or packed preview. Selecting the active preview again, or selecting a drawing tool, returns to the editable grid.
 The right panel includes a **Subpixel Signal** readout that shows active logical slot counts and remaps the channel labels when switching between RGB and BGR display profiles.
+It also includes an **Export** readout with packed PNG size, RGBA byte count, render order, and logical slot-to-channel mapping.
 
 ## Tools
 
