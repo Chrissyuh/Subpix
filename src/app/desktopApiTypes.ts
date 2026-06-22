@@ -28,6 +28,8 @@ export type DesktopAppCommand =
   | "undo"
   | "redo"
   | "clear"
+  | "insert-calibration-bars"
+  | "insert-slot-sweep"
   | "select-brush"
   | "select-eraser"
   | "show-grid-view"

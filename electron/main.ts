@@ -135,6 +135,13 @@ function buildApplicationMenu(): void {
       ]
     },
     {
+      label: "Tools",
+      submenu: [
+        commandMenuItem("Insert Calibration Bars", "insert-calibration-bars"),
+        commandMenuItem("Insert Slot Sweep", "insert-slot-sweep")
+      ]
+    },
+    {
       label: "View",
       submenu: [
         commandMenuItem("Drawing Grid", "show-grid-view", "CommandOrControl+1"),

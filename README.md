@@ -85,9 +85,11 @@ The right panel includes a **Subpixel Signal** readout that shows active logical
 - Zoom in and out
 - Grid toggle
 - Pixel-boundary toggle every three subpixel columns
+- Calibration and slot-sweep pattern insertion
 
 The canvas is scrollable, which provides practical panning for zoomed-in documents.
 Subpix remembers local workspace preferences, including selected tool, display profile, zoom, grid visibility, and pixel-boundary visibility.
+The pattern controls insert deterministic `.subpix` artwork into the active layer, including RGB calibration bars and a grayscale-compatible slot sweep for preview/export checks.
 
 ## Desktop Menus
 
@@ -95,6 +97,7 @@ The Electron build includes native desktop menus for common work:
 
 - **File**: new documents, open, save, save as, and packed PNG export
 - **Edit**: undo, redo, brush, eraser, and clear canvas
+- **Tools**: calibration bars and slot-sweep pattern insertion
 - **View**: drawing grid, simulated preview, packed preview, zoom, grid, and pixel boundaries
 - **Display**: RGB stripe, BGR stripe, and incompatible simulated-only profiles
 

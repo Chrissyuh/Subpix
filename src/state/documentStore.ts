@@ -1,4 +1,5 @@
 import { createContext, createElement, useContext, useMemo, useReducer, type ReactElement, type ReactNode } from "react";
+import { applySubpixPattern, type SubpixPatternId } from "@/format/patterns";
 import {
   cloneSubpixDocument,
   createSubpixDocument,
@@ -25,6 +26,7 @@ interface DocumentStoreActions {
   beginStroke: () => void;
   paintCell: (x: number, y: number, intensity: number) => void;
   endStroke: () => void;
+  insertPattern: (patternId: SubpixPatternId) => void;
   clearCanvas: () => void;
   undo: () => void;
   redo: () => void;
@@ -42,6 +44,7 @@ type Action =
   | { type: "begin-stroke" }
   | { type: "paint-cell"; x: number; y: number; intensity: number }
   | { type: "end-stroke" }
+  | { type: "insert-pattern"; patternId: SubpixPatternId }
   | { type: "clear" }
   | { type: "undo" }
   | { type: "redo" };
@@ -187,6 +190,22 @@ function reducer(state: DocumentStoreState, action: Action): DocumentStoreState 
       };
     }
 
+    case "insert-pattern": {
+      const nextDocument = applySubpixPattern(state.currentDocument, action.patternId);
+      if (documentsEqual(nextDocument, state.currentDocument)) {
+        return state;
+      }
+
+      return {
+        ...state,
+        currentDocument: nextDocument,
+        isDirty: !documentsEqual(nextDocument, state.savedDocument),
+        past: [...state.past, cloneSubpixDocument(state.currentDocument)],
+        future: [],
+        strokeStart: null
+      };
+    }
+
     case "clear": {
       const nextDocument = clearDocument(state.currentDocument);
       if (documentsEqual(nextDocument, state.currentDocument)) {
@@ -257,6 +276,7 @@ export function DocumentStoreProvider({ children }: { children: ReactNode }): Re
         beginStroke: () => dispatch({ type: "begin-stroke" }),
         paintCell: (x, y, intensity) => dispatch({ type: "paint-cell", x, y, intensity }),
         endStroke: () => dispatch({ type: "end-stroke" }),
+        insertPattern: (patternId) => dispatch({ type: "insert-pattern", patternId }),
         clearCanvas: () => dispatch({ type: "clear" }),
         undo: () => dispatch({ type: "undo" }),
         redo: () => dispatch({ type: "redo" })
