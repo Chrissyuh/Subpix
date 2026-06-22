@@ -1,13 +1,16 @@
 import { createContext, createElement, useContext, useMemo, useReducer, type ReactElement, type ReactNode } from "react";
 import {
   cloneSubpixDocument,
+  createSubpixDocument,
   createDefaultSubpixDocument,
   getWidthSubpixels,
+  type CreateSubpixDocumentOptions,
   type SubpixDocument
 } from "@/format/subpixTypes";
 
 interface DocumentStoreState {
   currentDocument: SubpixDocument;
+  savedDocument: SubpixDocument;
   filePath: string | null;
   isDirty: boolean;
   past: SubpixDocument[];
@@ -17,7 +20,7 @@ interface DocumentStoreState {
 
 interface DocumentStoreActions {
   loadDocument: (document: SubpixDocument, filePath: string | null) => void;
-  newDocument: () => void;
+  newDocument: (options?: CreateSubpixDocumentOptions) => void;
   setSavedPath: (filePath: string) => void;
   beginStroke: () => void;
   paintCell: (x: number, y: number, intensity: number) => void;
@@ -34,7 +37,7 @@ interface DocumentStoreValue {
 
 type Action =
   | { type: "load"; document: SubpixDocument; filePath: string | null }
-  | { type: "new" }
+  | { type: "new"; options?: CreateSubpixDocumentOptions }
   | { type: "saved"; filePath: string }
   | { type: "begin-stroke" }
   | { type: "paint-cell"; x: number; y: number; intensity: number }
@@ -43,8 +46,11 @@ type Action =
   | { type: "undo" }
   | { type: "redo" };
 
+const initialDocument = createDefaultSubpixDocument();
+
 const initialState: DocumentStoreState = {
-  currentDocument: createDefaultSubpixDocument(),
+  currentDocument: initialDocument,
+  savedDocument: cloneSubpixDocument(initialDocument),
   filePath: null,
   isDirty: false,
   past: [],
@@ -53,13 +59,37 @@ const initialState: DocumentStoreState = {
 };
 
 function documentsEqual(left: SubpixDocument, right: SubpixDocument): boolean {
+  if (
+    left.format !== right.format ||
+    left.version !== right.version ||
+    left.document.name !== right.document.name ||
+    left.document.widthPixels !== right.document.widthPixels ||
+    left.document.heightPixels !== right.document.heightPixels ||
+    left.architecture.geometry !== right.architecture.geometry ||
+    left.architecture.defaultOrder !== right.architecture.defaultOrder ||
+    left.architecture.lossyFallbackAllowed !== right.architecture.lossyFallbackAllowed ||
+    left.architecture.slotsPerPixel.join("x") !== right.architecture.slotsPerPixel.join("x") ||
+    left.architecture.compatibleOrders.join(",") !== right.architecture.compatibleOrders.join(",")
+  ) {
+    return false;
+  }
+
   if (left.layers.length !== right.layers.length) {
     return false;
   }
 
   return left.layers.every((layer, layerIndex) => {
     const nextLayer = right.layers[layerIndex];
-    return layer.data.length === nextLayer.data.length && layer.data.every((value, index) => value === nextLayer.data[index]);
+    return (
+      layer.name === nextLayer.name &&
+      layer.visible === nextLayer.visible &&
+      layer.opacity === nextLayer.opacity &&
+      layer.widthSubpixels === nextLayer.widthSubpixels &&
+      layer.heightSubpixels === nextLayer.heightSubpixels &&
+      layer.dataEncoding === nextLayer.dataEncoding &&
+      layer.data.length === nextLayer.data.length &&
+      layer.data.every((value, index) => value === nextLayer.data[index])
+    );
   });
 }
 
@@ -88,29 +118,36 @@ function clearDocument(document: SubpixDocument): SubpixDocument {
 
 function reducer(state: DocumentStoreState, action: Action): DocumentStoreState {
   switch (action.type) {
-    case "load":
+    case "load": {
+      const nextDocument = cloneSubpixDocument(action.document);
       return {
-        currentDocument: cloneSubpixDocument(action.document),
+        currentDocument: nextDocument,
+        savedDocument: cloneSubpixDocument(nextDocument),
         filePath: action.filePath,
         isDirty: false,
         past: [],
         future: [],
         strokeStart: null
       };
+    }
 
-    case "new":
+    case "new": {
+      const nextDocument = createSubpixDocument(action.options);
       return {
-        currentDocument: createDefaultSubpixDocument(),
+        currentDocument: nextDocument,
+        savedDocument: cloneSubpixDocument(nextDocument),
         filePath: null,
         isDirty: false,
         past: [],
         future: [],
         strokeStart: null
       };
+    }
 
     case "saved":
       return {
         ...state,
+        savedDocument: cloneSubpixDocument(state.currentDocument),
         filePath: action.filePath,
         isDirty: false
       };
@@ -130,7 +167,7 @@ function reducer(state: DocumentStoreState, action: Action): DocumentStoreState 
         : {
             ...state,
             currentDocument: nextDocument,
-            isDirty: true
+            isDirty: !documentsEqual(nextDocument, state.savedDocument)
           };
     }
 
@@ -159,7 +196,7 @@ function reducer(state: DocumentStoreState, action: Action): DocumentStoreState 
       return {
         ...state,
         currentDocument: nextDocument,
-        isDirty: true,
+        isDirty: !documentsEqual(nextDocument, state.savedDocument),
         past: [...state.past, cloneSubpixDocument(state.currentDocument)],
         future: [],
         strokeStart: null
@@ -172,10 +209,12 @@ function reducer(state: DocumentStoreState, action: Action): DocumentStoreState 
         return state;
       }
 
+      const previousDocument = cloneSubpixDocument(previous);
+
       return {
         ...state,
-        currentDocument: cloneSubpixDocument(previous),
-        isDirty: true,
+        currentDocument: previousDocument,
+        isDirty: !documentsEqual(previousDocument, state.savedDocument),
         past: state.past.slice(0, -1),
         future: [cloneSubpixDocument(state.currentDocument), ...state.future],
         strokeStart: null
@@ -188,10 +227,12 @@ function reducer(state: DocumentStoreState, action: Action): DocumentStoreState 
         return state;
       }
 
+      const nextDocument = cloneSubpixDocument(next);
+
       return {
         ...state,
-        currentDocument: cloneSubpixDocument(next),
-        isDirty: true,
+        currentDocument: nextDocument,
+        isDirty: !documentsEqual(nextDocument, state.savedDocument),
         past: [...state.past, cloneSubpixDocument(state.currentDocument)],
         future: state.future.slice(1),
         strokeStart: null
@@ -211,7 +252,7 @@ export function DocumentStoreProvider({ children }: { children: ReactNode }): Re
   const actions = useMemo<DocumentStoreActions>(
     () => ({
         loadDocument: (document, filePath) => dispatch({ type: "load", document, filePath }),
-        newDocument: () => dispatch({ type: "new" }),
+        newDocument: (options) => dispatch({ type: "new", options }),
         setSavedPath: (filePath) => dispatch({ type: "saved", filePath }),
         beginStroke: () => dispatch({ type: "begin-stroke" }),
         paintCell: (x, y, intensity) => dispatch({ type: "paint-cell", x, y, intensity }),

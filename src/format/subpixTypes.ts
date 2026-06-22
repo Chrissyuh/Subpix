@@ -3,6 +3,11 @@ export const SUBPIX_VERSION = 1;
 export const SUBPIX_EXTENSION = ".subpix";
 export const SUBPIX_INTERNAL_MIME = "image/x-subpix";
 export const DEFAULT_DOCUMENT_FILE_NAME = "Untitled.subpix";
+export const DEFAULT_DOCUMENT_NAME = "Untitled";
+export const DEFAULT_WIDTH_PIXELS = 32;
+export const DEFAULT_HEIGHT_PIXELS = 32;
+export const MIN_DOCUMENT_PIXELS = 1;
+export const MAX_DOCUMENT_PIXELS = 512;
 
 export type SubpixOrder = "RGB" | "BGR";
 export type ViewMode = "grid" | "simulated" | "packed";
@@ -39,6 +44,12 @@ export interface SubpixDocument {
   layers: SubpixLayer[];
 }
 
+export interface CreateSubpixDocumentOptions {
+  name?: string;
+  widthPixels?: number;
+  heightPixels?: number;
+}
+
 export interface DisplayProfile {
   id: DisplayProfileId;
   label: string;
@@ -71,9 +82,23 @@ export function getExpectedDataLength(document: SubpixDocument): number {
   return getWidthSubpixels(document) * getHeightSubpixels(document);
 }
 
-export function createDefaultSubpixDocument(name = "Untitled"): SubpixDocument {
-  const widthPixels = 32;
-  const heightPixels = 32;
+export function isSupportedDocumentDimension(value: unknown): value is number {
+  return Number.isInteger(value) && Number(value) >= MIN_DOCUMENT_PIXELS && Number(value) <= MAX_DOCUMENT_PIXELS;
+}
+
+export function normalizeDocumentName(name: string | undefined): string {
+  const trimmedName = name?.trim() ?? "";
+  return trimmedName.length > 0 ? trimmedName : DEFAULT_DOCUMENT_NAME;
+}
+
+export function createSubpixDocument(options: CreateSubpixDocumentOptions = {}): SubpixDocument {
+  const widthPixels = options.widthPixels ?? DEFAULT_WIDTH_PIXELS;
+  const heightPixels = options.heightPixels ?? DEFAULT_HEIGHT_PIXELS;
+
+  if (!isSupportedDocumentDimension(widthPixels) || !isSupportedDocumentDimension(heightPixels)) {
+    throw new Error(`Document dimensions must be whole pixels from ${MIN_DOCUMENT_PIXELS} to ${MAX_DOCUMENT_PIXELS}.`);
+  }
+
   const widthSubpixels = widthPixels * HORIZONTAL_STRIPE_ARCHITECTURE.slotsPerPixel[0];
   const heightSubpixels = heightPixels * HORIZONTAL_STRIPE_ARCHITECTURE.slotsPerPixel[1];
 
@@ -81,7 +106,7 @@ export function createDefaultSubpixDocument(name = "Untitled"): SubpixDocument {
     format: SUBPIX_FORMAT,
     version: SUBPIX_VERSION,
     document: {
-      name,
+      name: normalizeDocumentName(options.name),
       widthPixels,
       heightPixels
     },
@@ -98,6 +123,10 @@ export function createDefaultSubpixDocument(name = "Untitled"): SubpixDocument {
       }
     ]
   };
+}
+
+export function createDefaultSubpixDocument(name = DEFAULT_DOCUMENT_NAME): SubpixDocument {
+  return createSubpixDocument({ name });
 }
 
 export function cloneSubpixDocument(document: SubpixDocument): SubpixDocument {

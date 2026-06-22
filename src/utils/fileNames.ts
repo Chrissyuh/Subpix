@@ -1,6 +1,6 @@
 export function baseNameFromPath(filePath: string | null): string {
   if (!filePath) {
-    return "Untitled";
+    return "";
   }
 
   const normalized = filePath.replaceAll("\\", "/");
@@ -15,4 +15,3 @@ export function ensureSubpixFileName(name: string): string {
 export function ensurePngFileName(name: string): string {
   return name.toLowerCase().endsWith(".png") ? name : `${name}.png`;
 }
-

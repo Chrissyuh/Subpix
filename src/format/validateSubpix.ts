@@ -1,6 +1,10 @@
 import {
+  MAX_DOCUMENT_PIXELS,
+  MIN_DOCUMENT_PIXELS,
   SUBPIX_FORMAT,
   SUBPIX_VERSION,
+  isSupportedDocumentDimension,
+  normalizeDocumentName,
   type SubpixArchitecture,
   type SubpixDocument,
   type SubpixLayer,
@@ -15,10 +19,6 @@ export interface ValidationResult {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isPositiveInteger(value: unknown): value is number {
-  return Number.isInteger(value) && Number(value) > 0;
 }
 
 function isOrder(value: unknown): value is SubpixOrder {
@@ -47,12 +47,20 @@ function validateArchitecture(value: unknown, errors: string[]): SubpixArchitect
     errors.push("architecture.slotsPerPixel must be [3, 1].");
   }
 
-  if (!Array.isArray(compatibleOrders) || compatibleOrders.some((order) => !isOrder(order))) {
-    errors.push('architecture.compatibleOrders must contain only "RGB" and/or "BGR".');
+  if (
+    !Array.isArray(compatibleOrders) ||
+    compatibleOrders.length === 0 ||
+    compatibleOrders.some((order) => !isOrder(order))
+  ) {
+    errors.push('architecture.compatibleOrders must contain at least one "RGB" or "BGR" order.');
   }
 
   if (!isOrder(value.defaultOrder)) {
     errors.push('architecture.defaultOrder must be "RGB" or "BGR".');
+  }
+
+  if (Array.isArray(compatibleOrders) && isOrder(value.defaultOrder) && !compatibleOrders.includes(value.defaultOrder)) {
+    errors.push("architecture.defaultOrder must be included in architecture.compatibleOrders.");
   }
 
   if (typeof value.lossyFallbackAllowed !== "boolean") {
@@ -79,6 +87,8 @@ function validateLayer(
   heightSubpixels: number,
   errors: string[]
 ): SubpixLayer | null {
+  const startingErrorCount = errors.length;
+
   if (!isRecord(value)) {
     errors.push(`layers[${index}] must be an object.`);
     return null;
@@ -124,7 +134,7 @@ function validateLayer(
     }
   }
 
-  if (errors.length > 0) {
+  if (errors.length > startingErrorCount) {
     return null;
   }
 
@@ -167,20 +177,20 @@ export function validateSubpix(input: unknown): ValidationResult {
     errors.push("document.name must be a non-empty string.");
   }
 
-  if (!isPositiveInteger(widthPixels)) {
-    errors.push("document.widthPixels must be a positive integer.");
+  if (!isSupportedDocumentDimension(widthPixels)) {
+    errors.push(`document.widthPixels must be a whole number from ${MIN_DOCUMENT_PIXELS} to ${MAX_DOCUMENT_PIXELS}.`);
   }
 
-  if (!isPositiveInteger(heightPixels)) {
-    errors.push("document.heightPixels must be a positive integer.");
+  if (!isSupportedDocumentDimension(heightPixels)) {
+    errors.push(`document.heightPixels must be a whole number from ${MIN_DOCUMENT_PIXELS} to ${MAX_DOCUMENT_PIXELS}.`);
   }
 
   const architectureErrors: string[] = [];
   const architecture = validateArchitecture(input.architecture, architectureErrors);
   errors.push(...architectureErrors);
 
-  const widthSubpixels = isPositiveInteger(widthPixels) ? widthPixels * 3 : 0;
-  const heightSubpixels = isPositiveInteger(heightPixels) ? heightPixels : 0;
+  const widthSubpixels = isSupportedDocumentDimension(widthPixels) ? widthPixels * 3 : 0;
+  const heightSubpixels = isSupportedDocumentDimension(heightPixels) ? heightPixels : 0;
 
   if (!Array.isArray(input.layers) || input.layers.length === 0) {
     errors.push("layers must be a non-empty array.");
@@ -195,7 +205,12 @@ export function validateSubpix(input: unknown): ValidationResult {
       : [];
   errors.push(...layerErrors);
 
-  if (errors.length > 0 || !architecture || !isPositiveInteger(widthPixels) || !isPositiveInteger(heightPixels)) {
+  if (
+    errors.length > 0 ||
+    !architecture ||
+    !isSupportedDocumentDimension(widthPixels) ||
+    !isSupportedDocumentDimension(heightPixels)
+  ) {
     return { ok: false, errors };
   }
 
@@ -206,7 +221,7 @@ export function validateSubpix(input: unknown): ValidationResult {
       format: SUBPIX_FORMAT,
       version: SUBPIX_VERSION,
       document: {
-        name,
+        name: normalizeDocumentName(name),
         widthPixels,
         heightPixels
       },
@@ -215,4 +230,3 @@ export function validateSubpix(input: unknown): ValidationResult {
     }
   };
 }
-

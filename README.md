@@ -9,6 +9,7 @@ R G B | R G B | R G B
 ```
 
 That makes a 32 x 32 real-pixel document a 96 x 32 editable subpixel canvas.
+New documents default to 32 x 32 real pixels, and Subpix v1 supports custom documents from 1 x 1 through 512 x 512 real pixels.
 
 ## Why `.subpix` Exists
 
@@ -92,6 +93,7 @@ When loading a `.subpix` file, Subpix checks:
 
 - `format` is `SUBPIX`
 - `version` is supported
+- document dimensions are whole pixels in the supported v1 range
 - the architecture is horizontal 3 x 1 stripe
 - layer dimensions match the document dimensions
 - layer data length is correct

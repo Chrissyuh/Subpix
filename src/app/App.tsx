@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from "react";
 import {
   Brush,
+  Check,
   Download,
   Eraser,
   Eye,
@@ -13,6 +14,7 @@ import {
   SaveAll,
   Trash2,
   Undo2,
+  X,
   ZoomIn,
   ZoomOut
 } from "lucide-react";
@@ -24,12 +26,20 @@ import { saveSubpix } from "@/format/saveSubpix";
 import {
   canUsePackedPreview,
   DEFAULT_DOCUMENT_FILE_NAME,
+  DEFAULT_DOCUMENT_NAME,
+  DEFAULT_HEIGHT_PIXELS,
+  DEFAULT_WIDTH_PIXELS,
   DISPLAY_PROFILES,
+  MAX_DOCUMENT_PIXELS,
+  MIN_DOCUMENT_PIXELS,
   getCompatibilityMessage,
   getDisplayProfileLabel,
+  getExpectedDataLength,
   getHeightSubpixels,
   getRenderOrder,
   getWidthSubpixels,
+  isSupportedDocumentDimension,
+  normalizeDocumentName,
   SUBPIX_INTERNAL_MIME,
   type DisplayProfileId,
   type Tool,
@@ -42,6 +52,18 @@ const PREVIEW_MODES: Array<{ id: Exclude<ViewMode, "grid">; label: string }> = [
   { id: "simulated", label: "Simulated" },
   { id: "packed", label: "Packed" }
 ];
+
+interface NewDocumentDraft {
+  name: string;
+  widthPixels: string;
+  heightPixels: string;
+}
+
+const DEFAULT_NEW_DOCUMENT_DRAFT: NewDocumentDraft = {
+  name: DEFAULT_DOCUMENT_NAME,
+  widthPixels: String(DEFAULT_WIDTH_PIXELS),
+  heightPixels: String(DEFAULT_HEIGHT_PIXELS)
+};
 
 function formatError(error: unknown): string {
   if (error instanceof SubpixLoadError) {
@@ -65,6 +87,9 @@ export function App(): ReactElement {
   const [showGrid, setShowGrid] = useState(true);
   const [showPixelBoundaries, setShowPixelBoundaries] = useState(true);
   const [statusMessage, setStatusMessage] = useState("Ready.");
+  const [isNewDocumentDialogOpen, setIsNewDocumentDialogOpen] = useState(false);
+  const [newDocumentDraft, setNewDocumentDraft] = useState<NewDocumentDraft>(DEFAULT_NEW_DOCUMENT_DRAFT);
+  const [newDocumentError, setNewDocumentError] = useState<string | null>(null);
 
   const document = state.currentDocument;
   const packedAvailable = canUsePackedPreview(document, displayProfile);
@@ -72,8 +97,21 @@ export function App(): ReactElement {
   const compatibilityMessage = getCompatibilityMessage(document, displayProfile);
   const suggestedBaseName = baseNameFromPath(state.filePath) || document.document.name || "Untitled";
   const fileLabel = ensureSubpixFileName(suggestedBaseName);
+  const documentStats = useMemo(() => {
+    const totalCells = getExpectedDataLength(document);
+    const activeCells = document.layers.reduce(
+      (count, layer) => count + layer.data.filter((cell) => cell > 0).length,
+      0
+    );
+
+    return {
+      activeCells,
+      coverage: totalCells > 0 ? (activeCells / totalCells) * 100 : 0,
+      totalCells
+    };
+  }, [document]);
   const activeViewLabel =
-    viewMode === "grid" ? "Editable grid" : viewMode === "simulated" ? "Simulated preview" : "Packed preview";
+    viewMode === "grid" ? "Drawing grid" : viewMode === "simulated" ? "Simulated preview" : "Packed preview";
   const windowTitle = `${state.isDirty ? "*" : ""}${ensureSubpixFileName(suggestedBaseName)} - Subpix`;
 
   useEffect(() => {
@@ -171,14 +209,45 @@ export function App(): ReactElement {
     return !state.isDirty || window.confirm("Discard unsaved changes?");
   }
 
+  function parseDocumentDimension(value: string, label: string): number {
+    const parsedValue = Number(value);
+    if (!isSupportedDocumentDimension(parsedValue)) {
+      throw new Error(`${label} must be a whole number from ${MIN_DOCUMENT_PIXELS} to ${MAX_DOCUMENT_PIXELS}.`);
+    }
+
+    return parsedValue;
+  }
+
   function handleNew(): void {
+    setNewDocumentDraft(DEFAULT_NEW_DOCUMENT_DRAFT);
+    setNewDocumentError(null);
+    setIsNewDocumentDialogOpen(true);
+  }
+
+  function handleCreateDocument(event: FormEvent<HTMLFormElement>): void {
+    event.preventDefault();
+
+    let widthPixels: number;
+    let heightPixels: number;
+
+    try {
+      widthPixels = parseDocumentDimension(newDocumentDraft.widthPixels, "Width");
+      heightPixels = parseDocumentDimension(newDocumentDraft.heightPixels, "Height");
+    } catch (error) {
+      setNewDocumentError(formatError(error));
+      return;
+    }
+
     if (!confirmDiscardDirty()) {
       return;
     }
 
-    actions.newDocument();
+    const name = normalizeDocumentName(newDocumentDraft.name);
+    actions.newDocument({ name, widthPixels, heightPixels });
     setViewMode("grid");
-    setStatusMessage("Created Untitled.subpix.");
+    setIsNewDocumentDialogOpen(false);
+    setNewDocumentError(null);
+    setStatusMessage(`Created ${ensureSubpixFileName(name)} (${widthPixels}x${heightPixels}px).`);
   }
 
   async function handleOpen(): Promise<void> {
@@ -439,6 +508,16 @@ export function App(): ReactElement {
               </dd>
             </div>
             <div>
+              <dt>Active cells</dt>
+              <dd>
+                {documentStats.activeCells} / {documentStats.totalCells}
+              </dd>
+            </div>
+            <div>
+              <dt>Coverage</dt>
+              <dd>{documentStats.coverage.toFixed(1)}%</dd>
+            </div>
+            <div>
               <dt>Format</dt>
               <dd>{SUBPIX_INTERNAL_MIME}</dd>
             </div>
@@ -472,6 +551,102 @@ export function App(): ReactElement {
           <p>{compatibilityMessage}</p>
         </section>
       </aside>
+
+      {isNewDocumentDialogOpen ? (
+        <div className="modal-backdrop" role="presentation">
+          <form
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="new-document-title"
+            noValidate
+            onSubmit={handleCreateDocument}
+          >
+            <div className="modal__header">
+              <div>
+                <h2 id="new-document-title">New Subpixel Image</h2>
+                <p>{MIN_DOCUMENT_PIXELS}-{MAX_DOCUMENT_PIXELS}px real-pixel documents, horizontal 3 x 1 subpixels.</p>
+              </div>
+              <button
+                className="icon-button"
+                type="button"
+                title="Close"
+                onClick={() => setIsNewDocumentDialogOpen(false)}
+              >
+                <X size={17} />
+              </button>
+            </div>
+
+            <label className="input-field">
+              <span>Name</span>
+              <input
+                value={newDocumentDraft.name}
+                onChange={(event) =>
+                  setNewDocumentDraft((draft) => ({
+                    ...draft,
+                    name: event.target.value
+                  }))
+                }
+                placeholder={DEFAULT_DOCUMENT_NAME}
+              />
+            </label>
+
+            <div className="input-grid">
+              <label className="input-field">
+                <span>Width</span>
+                <input
+                  inputMode="numeric"
+                  min={MIN_DOCUMENT_PIXELS}
+                  max={MAX_DOCUMENT_PIXELS}
+                  step={1}
+                  type="number"
+                  value={newDocumentDraft.widthPixels}
+                  onChange={(event) =>
+                    setNewDocumentDraft((draft) => ({
+                      ...draft,
+                      widthPixels: event.target.value
+                    }))
+                  }
+                />
+              </label>
+              <label className="input-field">
+                <span>Height</span>
+                <input
+                  inputMode="numeric"
+                  min={MIN_DOCUMENT_PIXELS}
+                  max={MAX_DOCUMENT_PIXELS}
+                  step={1}
+                  type="number"
+                  value={newDocumentDraft.heightPixels}
+                  onChange={(event) =>
+                    setNewDocumentDraft((draft) => ({
+                      ...draft,
+                      heightPixels: event.target.value
+                    }))
+                  }
+                />
+              </label>
+            </div>
+
+            <div className="modal__summary">
+              {Number(newDocumentDraft.widthPixels || 0) * 3 || 0} x {Number(newDocumentDraft.heightPixels || 0) || 0}
+              {" "}subpixel cells
+            </div>
+
+            {newDocumentError ? <div className="modal__error">{newDocumentError}</div> : null}
+
+            <div className="modal__actions">
+              <button className="command-button" type="button" onClick={() => setIsNewDocumentDialogOpen(false)}>
+                Cancel
+              </button>
+              <button className="command-button command-button--primary" type="submit">
+                <Check size={16} />
+                Create
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : null}
 
       <footer className="status-bar" role="status">
         <span>{statusMessage}</span>
