@@ -66,17 +66,18 @@ The app includes three display profile options:
 - BGR horizontal stripe
 - Incompatible / simulated only
 
-## Views
+## Canvas And Previews
 
-- **Edit View**: a large editable subpixel grid. Each subpixel cell is drawn in its physical channel color.
-- **Simulated View**: an enlarged fake screen preview that shows the subpixel stripes clearly on any display.
-- **Packed Preview**: packs every three logical subpixel cells into one normal RGB pixel. This is the same packing used for PNG export.
+- **Canvas**: the default editable subpixel grid. Each subpixel cell is drawn in its physical channel color.
+- **Simulated preview**: an enlarged fake screen preview that shows the subpixel stripes clearly on any display.
+- **Packed preview**: packs every three logical subpixel cells into one normal RGB pixel. This is the same packing used for PNG export.
+
+The preview buttons switch the canvas into simulated or packed preview. Selecting the active preview again, or selecting a drawing tool, returns to the editable grid.
 
 ## Tools
 
 - Brush
 - Eraser
-- Eyedropper
 - Clear canvas
 - Undo and redo
 - Zoom in and out
@@ -135,4 +136,3 @@ npm run dist:win
 ## Exporting PNGs
 
 Open or create a `.subpix` document, choose a compatible RGB or BGR horizontal stripe display profile, then use **Export PNG**. Subpix packs the logical subpixel data into normal RGBA pixels with alpha set to 255.
-

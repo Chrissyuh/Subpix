@@ -57,16 +57,6 @@ export function packSubpixToRgba(document: SubpixDocument, order: SubpixOrder): 
   return rgba;
 }
 
-export function getSubpixelIntensity(document: SubpixDocument, x: number, y: number): number {
-  const widthSubpixels = getWidthSubpixels(document);
-  const heightSubpixels = document.document.heightPixels;
-  if (x < 0 || y < 0 || x >= widthSubpixels || y >= heightSubpixels) {
-    return 0;
-  }
-
-  return getCompositeSubpixelIntensities(document)[y * widthSubpixels + x] ?? 0;
-}
-
 export async function createPackedPngBytes(document: SubpixDocument, order: SubpixOrder): Promise<number[]> {
   const canvas = window.document.createElement("canvas");
   canvas.width = document.document.widthPixels;

@@ -8,7 +8,6 @@ import {
   FilePlus2,
   FolderOpen,
   Grid2X2,
-  Pipette,
   Redo2,
   Save,
   SaveAll,
@@ -39,10 +38,9 @@ import {
 import { useDocumentStore } from "@/state/documentStore";
 import { baseNameFromPath, ensurePngFileName, ensureSubpixFileName } from "@/utils/fileNames";
 
-const VIEW_MODES: Array<{ id: ViewMode; label: string }> = [
-  { id: "edit", label: "Edit View" },
-  { id: "simulated", label: "Simulated View" },
-  { id: "packed", label: "Packed Preview" }
+const PREVIEW_MODES: Array<{ id: Exclude<ViewMode, "grid">; label: string }> = [
+  { id: "simulated", label: "Simulated" },
+  { id: "packed", label: "Packed" }
 ];
 
 function formatError(error: unknown): string {
@@ -60,12 +58,11 @@ function formatError(error: unknown): string {
 export function App(): ReactElement {
   const { state, actions } = useDocumentStore();
   const [tool, setTool] = useState<Tool>("brush");
-  const [viewMode, setViewMode] = useState<ViewMode>("edit");
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [displayProfile, setDisplayProfile] = useState<DisplayProfileId>("rgb-horizontal");
   const [zoom, setZoom] = useState(12);
   const [showGrid, setShowGrid] = useState(true);
   const [showPixelBoundaries, setShowPixelBoundaries] = useState(true);
-  const [sampledIntensity, setSampledIntensity] = useState(255);
   const [statusMessage, setStatusMessage] = useState("Ready.");
 
   const document = state.currentDocument;
@@ -135,7 +132,7 @@ export function App(): ReactElement {
     }
 
     actions.newDocument();
-    setViewMode("edit");
+    setViewMode("grid");
     setStatusMessage("Created Untitled.subpix.");
   }
 
@@ -152,7 +149,7 @@ export function App(): ReactElement {
 
       const nextDocument = loadSubpix(result.content);
       actions.loadDocument(nextDocument, result.filePath);
-      setViewMode("edit");
+      setViewMode("grid");
       setStatusMessage(`Opened ${ensureSubpixFileName(baseNameFromPath(result.filePath))}.`);
     } catch (error) {
       setStatusMessage(`Open failed: ${formatError(error)}`);
@@ -254,12 +251,13 @@ export function App(): ReactElement {
           </button>
         </div>
 
-        <div className="segmented-control" role="tablist" aria-label="View mode">
-          {VIEW_MODES.map((mode) => (
+        <div className="segmented-control" aria-label="Preview mode">
+          {PREVIEW_MODES.map((mode) => (
             <button
               key={mode.id}
               className={viewMode === mode.id ? "is-selected" : ""}
-              onClick={() => setViewMode(mode.id)}
+              aria-pressed={viewMode === mode.id}
+              onClick={() => setViewMode((currentMode) => (currentMode === mode.id ? "grid" : mode.id))}
               disabled={mode.id === "packed" && !packedAvailable}
             >
               {mode.label}
@@ -284,7 +282,10 @@ export function App(): ReactElement {
           className={tool === "brush" ? "tool-button is-selected" : "tool-button"}
           title="Brush"
           aria-pressed={tool === "brush"}
-          onClick={() => setTool("brush")}
+          onClick={() => {
+            setTool("brush");
+            setViewMode("grid");
+          }}
         >
           <Brush size={20} />
         </button>
@@ -292,17 +293,12 @@ export function App(): ReactElement {
           className={tool === "eraser" ? "tool-button is-selected" : "tool-button"}
           title="Eraser"
           aria-pressed={tool === "eraser"}
-          onClick={() => setTool("eraser")}
+          onClick={() => {
+            setTool("eraser");
+            setViewMode("grid");
+          }}
         >
           <Eraser size={20} />
-        </button>
-        <button
-          className={tool === "eyedropper" ? "tool-button is-selected" : "tool-button"}
-          title="Eyedropper"
-          aria-pressed={tool === "eyedropper"}
-          onClick={() => setTool("eyedropper")}
-        >
-          <Pipette size={20} />
         </button>
         <button className="tool-button" title="Clear canvas" onClick={actions.clearCanvas}>
           <Trash2 size={20} />
@@ -324,9 +320,6 @@ export function App(): ReactElement {
         >
           {showPixelBoundaries ? <Eye size={20} /> : <EyeOff size={20} />}
         </button>
-        <div className="sample-chip" title="Last sampled intensity">
-          {sampledIntensity}
-        </div>
       </aside>
 
       <main className="workspace">
@@ -342,10 +335,6 @@ export function App(): ReactElement {
           onBeginStroke={actions.beginStroke}
           onPaintCell={actions.paintCell}
           onEndStroke={actions.endStroke}
-          onSampleIntensity={(intensity) => {
-            setSampledIntensity(intensity);
-            setStatusMessage(`Sampled intensity ${intensity}.`);
-          }}
         />
       </main>
 

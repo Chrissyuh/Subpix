@@ -5,8 +5,8 @@ export const SUBPIX_INTERNAL_MIME = "image/x-subpix";
 export const DEFAULT_DOCUMENT_FILE_NAME = "Untitled.subpix";
 
 export type SubpixOrder = "RGB" | "BGR";
-export type ViewMode = "edit" | "simulated" | "packed";
-export type Tool = "brush" | "eraser" | "eyedropper";
+export type ViewMode = "grid" | "simulated" | "packed";
+export type Tool = "brush" | "eraser";
 export type DisplayProfileId = "rgb-horizontal" | "bgr-horizontal" | "incompatible";
 
 export interface SubpixArchitecture {

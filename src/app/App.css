@@ -1,6 +1,6 @@
 :root {
-  color: #1c232b;
-  background: #f4f6f8;
+  color: #f7f7f7;
+  background: #050505;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-synthesis: none;
@@ -16,6 +16,7 @@ body {
   min-width: 960px;
   min-height: 640px;
   overflow: hidden;
+  background: #050505;
 }
 
 button,
@@ -33,8 +34,8 @@ button {
   grid-template-rows: 58px minmax(0, 1fr) 30px;
   width: 100vw;
   height: 100vh;
-  color: #1c232b;
-  background: #edf1f4;
+  color: #f7f7f7;
+  background: #050505;
 }
 
 .top-bar {
@@ -44,8 +45,8 @@ button {
   gap: 12px;
   min-width: 0;
   padding: 10px 14px;
-  border-bottom: 1px solid #cfd8df;
-  background: #fbfcfd;
+  border-bottom: 1px solid #2c2c2c;
+  background: #0c0c0c;
 }
 
 .top-bar__group {
@@ -64,10 +65,10 @@ button {
   justify-content: center;
   gap: 7px;
   height: 34px;
-  border: 1px solid #c8d2da;
+  border: 1px solid #343434;
   border-radius: 6px;
-  color: #22303a;
-  background: #ffffff;
+  color: #f1f1f1;
+  background: #141414;
   cursor: pointer;
 }
 
@@ -86,49 +87,49 @@ button {
 .icon-button:hover,
 .tool-button:hover,
 .segmented-control button:hover {
-  border-color: #7597aa;
-  background: #f4f9fb;
+  border-color: #ffffff;
+  background: #202020;
 }
 
 .command-button:disabled,
 .icon-button:disabled,
 .segmented-control button:disabled {
-  color: #8a97a1;
-  border-color: #d8dfe5;
-  background: #eef2f5;
+  color: #666666;
+  border-color: #242424;
+  background: #101010;
   cursor: not-allowed;
 }
 
 .icon-button.is-selected,
 .tool-button.is-selected,
 .segmented-control .is-selected {
-  color: #07363d;
-  border-color: #138a9f;
-  background: #dff6f8;
+  color: #050505;
+  border-color: #ffffff;
+  background: #ffffff;
 }
 
 .zoom-readout {
   min-width: 42px;
   padding: 0 5px;
-  color: #485560;
+  color: #d8d8d8;
   text-align: center;
   white-space: nowrap;
 }
 
 .segmented-control {
   display: flex;
-  min-width: 360px;
+  min-width: 224px;
   overflow: hidden;
-  border: 1px solid #c8d2da;
+  border: 1px solid #343434;
   border-radius: 7px;
-  background: #ffffff;
+  background: #141414;
 }
 
 .segmented-control button {
   min-width: 112px;
   padding: 0 10px;
   border: 0;
-  border-right: 1px solid #d8e0e6;
+  border-right: 1px solid #2c2c2c;
   border-radius: 0;
   background: transparent;
 }
@@ -143,7 +144,7 @@ button {
   gap: 8px;
   min-width: 260px;
   margin-left: auto;
-  color: #52606b;
+  color: #d0d0d0;
   white-space: nowrap;
 }
 
@@ -151,10 +152,10 @@ button {
   width: 100%;
   height: 34px;
   padding: 0 34px 0 10px;
-  border: 1px solid #c8d2da;
+  border: 1px solid #343434;
   border-radius: 6px;
-  color: #21303a;
-  background: #ffffff;
+  color: #f7f7f7;
+  background: #141414;
 }
 
 .left-toolbar {
@@ -164,30 +165,15 @@ button {
   align-items: center;
   gap: 8px;
   padding: 12px 0;
-  border-right: 1px solid #cfd8df;
-  background: #f8fafb;
+  border-right: 1px solid #2c2c2c;
+  background: #0c0c0c;
 }
 
 .toolbar-divider {
   width: 34px;
   height: 1px;
   margin: 2px 0;
-  background: #d4dde4;
-}
-
-.sample-chip {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  min-height: 28px;
-  margin-top: auto;
-  border: 1px solid #c8d2da;
-  border-radius: 6px;
-  color: #22303a;
-  background: #ffffff;
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
+  background: #343434;
 }
 
 .workspace {
@@ -197,9 +183,9 @@ button {
   overflow: auto;
   padding: 24px;
   background:
-    linear-gradient(90deg, rgba(28, 35, 43, 0.055) 1px, transparent 1px),
-    linear-gradient(rgba(28, 35, 43, 0.055) 1px, transparent 1px),
-    #e6ebef;
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    #080808;
   background-size: 24px 24px;
 }
 
@@ -212,13 +198,13 @@ button {
 
 .subpixel-canvas {
   display: block;
-  border: 1px solid #0c1116;
+  border: 1px solid #ffffff;
   border-radius: 4px;
-  box-shadow: 0 12px 28px rgba(20, 30, 38, 0.22);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.72);
   image-rendering: pixelated;
 }
 
-.subpixel-canvas--edit {
+.subpixel-canvas--grid {
   cursor: crosshair;
 }
 
@@ -227,9 +213,9 @@ button {
   right: 318px;
   bottom: 42px;
   padding: 5px 8px;
-  border: 1px solid #b8c5ce;
+  border: 1px solid #ffffff;
   border-radius: 6px;
-  color: #2e3b45;
+  color: #050505;
   background: rgba(255, 255, 255, 0.94);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
@@ -240,30 +226,30 @@ button {
   display: grid;
   place-items: center;
   min-height: 340px;
-  border: 1px dashed #acb8c2;
+  border: 1px dashed #777777;
   border-radius: 8px;
-  color: #5b6872;
-  background: rgba(255, 255, 255, 0.72);
+  color: #dedede;
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .right-panel {
   grid-column: 3;
   grid-row: 2;
   overflow-y: auto;
-  border-left: 1px solid #cfd8df;
-  background: #fbfcfd;
+  border-left: 1px solid #2c2c2c;
+  background: #0c0c0c;
 }
 
 .panel-section,
 .compatibility {
   padding: 18px 18px 16px;
-  border-bottom: 1px solid #dbe3e9;
+  border-bottom: 1px solid #242424;
 }
 
 .panel-section h2,
 .compatibility h2 {
   margin: 0 0 12px;
-  color: #18252d;
+  color: #ffffff;
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0;
@@ -284,31 +270,31 @@ dl div {
 }
 
 dt {
-  color: #687580;
+  color: #9d9d9d;
   font-size: 12px;
 }
 
 dd {
   min-width: 0;
   margin: 0;
-  color: #25313a;
+  color: #f0f0f0;
   font-size: 13px;
   overflow-wrap: anywhere;
 }
 
 .compatibility {
-  border-left: 4px solid #1c946f;
-  background: #eefaf5;
+  border-left: 4px solid #ffffff;
+  background: #161616;
 }
 
 .compatibility--bad {
-  border-left-color: #b86a16;
-  background: #fff7e8;
+  border-left-color: #ffffff;
+  background: #1d1d1d;
 }
 
 .compatibility p {
   margin: 0;
-  color: #39454e;
+  color: #d8d8d8;
   font-size: 13px;
   line-height: 1.45;
 }
@@ -322,9 +308,9 @@ dd {
   gap: 16px;
   min-width: 0;
   padding: 0 12px;
-  border-top: 1px solid #cfd8df;
-  color: #55626d;
-  background: #fbfcfd;
+  border-top: 1px solid #2c2c2c;
+  color: #d8d8d8;
+  background: #0c0c0c;
   font-size: 12px;
 }
 
@@ -352,4 +338,3 @@ dd {
     min-width: 102px;
   }
 }
-

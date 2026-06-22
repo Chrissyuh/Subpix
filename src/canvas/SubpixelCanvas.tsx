@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
-import { renderEditView } from "@/canvas/renderEditView";
 import { renderPackedPreview } from "@/canvas/renderPackedPreview";
 import { renderSimulatedView } from "@/canvas/renderSimulatedView";
-import { getSubpixelIntensity } from "@/format/exportPng";
+import { renderSubpixelGrid } from "@/canvas/renderSubpixelGrid";
 import {
   canUsePackedPreview,
   getHeightSubpixels,
@@ -33,7 +32,6 @@ export interface SubpixelCanvasProps {
   onBeginStroke: () => void;
   onPaintCell: (x: number, y: number, intensity: number) => void;
   onEndStroke: () => void;
-  onSampleIntensity: (intensity: number) => void;
 }
 
 function getCanvasMetrics(document: SubpixDocument, viewMode: ViewMode, zoom: number): CanvasMetrics {
@@ -78,8 +76,7 @@ export function SubpixelCanvas({
   showPixelBoundaries,
   onBeginStroke,
   onPaintCell,
-  onEndStroke,
-  onSampleIntensity
+  onEndStroke
 }: SubpixelCanvasProps): ReactElement {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawingRef = useRef(false);
@@ -128,7 +125,7 @@ export function SubpixelCanvas({
       return;
     }
 
-    renderEditView(ctx, document, {
+    renderSubpixelGrid(ctx, document, {
       cellSize: zoom,
       order,
       showGrid,
@@ -137,7 +134,7 @@ export function SubpixelCanvas({
   }, [displayProfile, document, metrics, order, packedAvailable, showGrid, showPixelBoundaries, viewMode, zoom]);
 
   function getCellFromPointer(event: React.PointerEvent<HTMLCanvasElement>): { x: number; y: number } | null {
-    if (viewMode !== "edit") {
+    if (viewMode !== "grid") {
       return null;
     }
 
@@ -165,7 +162,7 @@ export function SubpixelCanvas({
   }
 
   function handlePointerDown(event: React.PointerEvent<HTMLCanvasElement>): void {
-    if (event.button !== 0 || viewMode !== "edit") {
+    if (event.button !== 0 || viewMode !== "grid") {
       return;
     }
 
@@ -177,11 +174,6 @@ export function SubpixelCanvas({
     event.currentTarget.setPointerCapture(event.pointerId);
     setPointerCell(cell);
 
-    if (tool === "eyedropper") {
-      onSampleIntensity(getSubpixelIntensity(document, cell.x, cell.y));
-      return;
-    }
-
     drawingRef.current = true;
     lastPaintedRef.current = null;
     onBeginStroke();
@@ -192,7 +184,7 @@ export function SubpixelCanvas({
     const cell = getCellFromPointer(event);
     setPointerCell(cell);
 
-    if (!cell || !drawingRef.current || tool === "eyedropper") {
+    if (!cell || !drawingRef.current) {
       return;
     }
 
@@ -227,7 +219,7 @@ export function SubpixelCanvas({
         onPointerCancel={handlePointerUp}
         onPointerLeave={() => setPointerCell(null)}
       />
-      {viewMode === "edit" && pointerCell ? (
+      {viewMode === "grid" && pointerCell ? (
         <div className="cell-readout">
           {pointerCell.x}, {pointerCell.y}
         </div>
