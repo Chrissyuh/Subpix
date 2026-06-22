@@ -89,6 +89,17 @@ The right panel includes a **Subpixel Signal** readout that shows active logical
 The canvas is scrollable, which provides practical panning for zoomed-in documents.
 Subpix remembers local workspace preferences, including selected tool, display profile, zoom, grid visibility, and pixel-boundary visibility.
 
+## Desktop Menus
+
+The Electron build includes native desktop menus for common work:
+
+- **File**: new documents, open, save, save as, and packed PNG export
+- **Edit**: undo, redo, brush, eraser, and clear canvas
+- **View**: drawing grid, simulated preview, packed preview, zoom, grid, and pixel boundaries
+- **Display**: RGB stripe, BGR stripe, and incompatible simulated-only profiles
+
+These menu actions are routed through the same editor commands as the toolbar and keyboard shortcuts.
+
 ## Validation
 
 When loading a `.subpix` file, Subpix checks:

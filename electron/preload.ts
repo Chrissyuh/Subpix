@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type {
   DesktopApi,
+  DesktopAppCommand,
   DesktopExportPngPayload,
   DesktopOpenResult,
   DesktopSavePayload,
@@ -14,6 +15,11 @@ const api: DesktopApi = {
     const handler = (_event: Electron.IpcRendererEvent, result: DesktopOpenResult): void => listener(result);
     ipcRenderer.on("subpix:file-opened", handler);
     return () => ipcRenderer.removeListener("subpix:file-opened", handler);
+  },
+  onAppCommand: (listener) => {
+    const handler = (_event: Electron.IpcRendererEvent, command: DesktopAppCommand): void => listener(command);
+    ipcRenderer.on("subpix:app-command", handler);
+    return () => ipcRenderer.removeListener("subpix:app-command", handler);
   },
   saveSubpix: (payload: DesktopSavePayload) =>
     ipcRenderer.invoke("subpix:save", payload) as Promise<DesktopSaveResult | null>,

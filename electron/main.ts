@@ -1,7 +1,17 @@
-import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  Menu,
+  shell,
+  type MenuItemConstructorOptions,
+  type MessageBoxOptions
+} from "electron";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type {
+  DesktopAppCommand,
   DesktopExportPngPayload,
   DesktopOpenResult,
   DesktopSavePayload,
@@ -78,6 +88,106 @@ async function openSubpixFileFromShell(filePath: string): Promise<void> {
   mainWindow.show();
   mainWindow.focus();
   mainWindow.webContents.send("subpix:file-opened", await readSubpixFile(filePath));
+}
+
+function sendAppCommand(command: DesktopAppCommand): void {
+  if (!mainWindow) {
+    return;
+  }
+
+  mainWindow.webContents.send("subpix:app-command", command);
+}
+
+function commandMenuItem(label: string, command: DesktopAppCommand, accelerator?: string): MenuItemConstructorOptions {
+  return {
+    label,
+    accelerator,
+    click: () => sendAppCommand(command)
+  };
+}
+
+function buildApplicationMenu(): void {
+  const template: MenuItemConstructorOptions[] = [
+    {
+      label: "File",
+      submenu: [
+        commandMenuItem("New Subpixel Image", "new", "CommandOrControl+N"),
+        commandMenuItem("Open...", "open", "CommandOrControl+O"),
+        { type: "separator" },
+        commandMenuItem("Save", "save", "CommandOrControl+S"),
+        commandMenuItem("Save As...", "save-as", "CommandOrControl+Shift+S"),
+        { type: "separator" },
+        commandMenuItem("Export Packed PNG...", "export-png", "CommandOrControl+Shift+E"),
+        { type: "separator" },
+        { role: process.platform === "darwin" ? "close" : "quit" }
+      ]
+    },
+    {
+      label: "Edit",
+      submenu: [
+        commandMenuItem("Undo", "undo", "CommandOrControl+Z"),
+        commandMenuItem("Redo", "redo", "CommandOrControl+Y"),
+        { type: "separator" },
+        commandMenuItem("Brush", "select-brush"),
+        commandMenuItem("Eraser", "select-eraser"),
+        { type: "separator" },
+        commandMenuItem("Clear Canvas", "clear", "CommandOrControl+Backspace")
+      ]
+    },
+    {
+      label: "View",
+      submenu: [
+        commandMenuItem("Drawing Grid", "show-grid-view", "CommandOrControl+1"),
+        commandMenuItem("Simulated Preview", "show-simulated-view", "CommandOrControl+2"),
+        commandMenuItem("Packed Preview", "show-packed-view", "CommandOrControl+3"),
+        { type: "separator" },
+        commandMenuItem("Zoom In", "zoom-in", "CommandOrControl+="),
+        commandMenuItem("Zoom Out", "zoom-out", "CommandOrControl+-"),
+        { type: "separator" },
+        commandMenuItem("Toggle Grid", "toggle-grid", "CommandOrControl+G"),
+        commandMenuItem("Toggle Pixel Boundaries", "toggle-pixel-boundaries", "CommandOrControl+Shift+P")
+      ]
+    },
+    {
+      label: "Display",
+      submenu: [
+        commandMenuItem("RGB Horizontal Stripe", "display-rgb"),
+        commandMenuItem("BGR Horizontal Stripe", "display-bgr"),
+        commandMenuItem("Incompatible / Simulated Only", "display-incompatible")
+      ]
+    },
+    {
+      label: "Window",
+      submenu: [{ role: "minimize" }, { role: "togglefullscreen" }]
+    },
+    {
+      label: "Help",
+      submenu: [
+        {
+          label: "About Subpix",
+          click: () => {
+            const options: MessageBoxOptions = {
+              buttons: ["OK"],
+              detail:
+                "Subpix edits logical RGB/BGR stripe subpixel artwork, saves readable .subpix files, and exports packed PNG images.",
+              message: "Subpix",
+              title: "About Subpix",
+              type: "info"
+            };
+
+            if (mainWindow) {
+              void dialog.showMessageBox(mainWindow, options);
+              return;
+            }
+
+            void dialog.showMessageBox(options);
+          }
+        }
+      ]
+    }
+  ];
+
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
 ipcMain.handle("subpix:open", async (): Promise<DesktopOpenResult | null> => {
@@ -170,6 +280,7 @@ if (!gotSingleInstanceLock) {
 
   app.whenReady().then(() => {
     app.setName("Subpix");
+    buildApplicationMenu();
     createWindow();
 
     app.on("activate", () => {

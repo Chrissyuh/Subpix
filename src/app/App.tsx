@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { SubpixelCanvas } from "@/canvas/SubpixelCanvas";
 import { getDesktopApi, isDesktopRuntime } from "@/app/desktopApi";
+import type { DesktopAppCommand } from "@/app/desktopApiTypes";
 import { getSubpixDocumentStats } from "@/format/documentStats";
 import { createPackedPngBytes } from "@/format/exportPng";
 import { loadSubpix, SubpixLoadError } from "@/format/loadSubpix";
@@ -192,6 +193,12 @@ export function App(): ReactElement {
   }, [packedAvailable, viewMode]);
 
   useEffect(() => {
+    return getDesktopApi().onAppCommand((command) => {
+      handleAppCommand(command);
+    });
+  });
+
+  useEffect(() => {
     function handleKeyDown(event: KeyboardEvent): void {
       const key = event.key.toLowerCase();
       const commandKey = event.ctrlKey || event.metaKey;
@@ -310,6 +317,75 @@ export function App(): ReactElement {
     const nextValue = !showPixelBoundaries;
     setShowPixelBoundaries(nextValue);
     setStatusMessage(`Pixel boundaries ${nextValue ? "shown" : "hidden"}.`);
+  }
+
+  function handleAppCommand(command: DesktopAppCommand): void {
+    switch (command) {
+      case "new":
+        handleNew();
+        break;
+      case "open":
+        void handleOpen();
+        break;
+      case "save":
+        void handleSave(false);
+        break;
+      case "save-as":
+        void handleSave(true);
+        break;
+      case "export-png":
+        void handleExportPng();
+        break;
+      case "undo":
+        actions.undo();
+        break;
+      case "redo":
+        actions.redo();
+        break;
+      case "clear":
+        actions.clearCanvas();
+        break;
+      case "select-brush":
+        selectTool("brush");
+        break;
+      case "select-eraser":
+        selectTool("eraser");
+        break;
+      case "show-grid-view":
+        setViewMode("grid");
+        setStatusMessage("Drawing grid selected.");
+        break;
+      case "show-simulated-view":
+        setPreviewMode("simulated");
+        break;
+      case "show-packed-view":
+        setPreviewMode("packed");
+        break;
+      case "zoom-in":
+        adjustZoom(zoom + ZOOM_STEP);
+        break;
+      case "zoom-out":
+        adjustZoom(zoom - ZOOM_STEP);
+        break;
+      case "toggle-grid":
+        toggleGrid();
+        break;
+      case "toggle-pixel-boundaries":
+        togglePixelBoundaries();
+        break;
+      case "display-rgb":
+        setDisplayProfile("rgb-horizontal");
+        setStatusMessage("RGB horizontal stripe display selected.");
+        break;
+      case "display-bgr":
+        setDisplayProfile("bgr-horizontal");
+        setStatusMessage("BGR horizontal stripe display selected.");
+        break;
+      case "display-incompatible":
+        setDisplayProfile("incompatible");
+        setStatusMessage("Incompatible display profile selected. Use simulated preview.");
+        break;
+    }
   }
 
   function confirmDiscardDirty(): boolean {
