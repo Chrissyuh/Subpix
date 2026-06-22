@@ -208,10 +208,8 @@ const DocumentStoreContext = createContext<DocumentStoreValue | null>(null);
 export function DocumentStoreProvider({ children }: { children: ReactNode }): ReactElement {
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  const value = useMemo<DocumentStoreValue>(
+  const actions = useMemo<DocumentStoreActions>(
     () => ({
-      state,
-      actions: {
         loadDocument: (document, filePath) => dispatch({ type: "load", document, filePath }),
         newDocument: () => dispatch({ type: "new" }),
         setSavedPath: (filePath) => dispatch({ type: "saved", filePath }),
@@ -221,10 +219,11 @@ export function DocumentStoreProvider({ children }: { children: ReactNode }): Re
         clearCanvas: () => dispatch({ type: "clear" }),
         undo: () => dispatch({ type: "undo" }),
         redo: () => dispatch({ type: "redo" })
-      }
     }),
-    [state]
+    []
   );
+
+  const value = useMemo<DocumentStoreValue>(() => ({ state, actions }), [actions, state]);
 
   return createElement(DocumentStoreContext.Provider, { value }, children);
 }

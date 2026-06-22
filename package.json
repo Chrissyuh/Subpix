@@ -24,7 +24,16 @@
     "win": {
       "target": "nsis",
       "artifactName": "Subpix-${version}-${arch}.${ext}"
-    }
+    },
+    "fileAssociations": [
+      {
+        "ext": "subpix",
+        "name": "Subpixel Image",
+        "description": "Subpix Subpixel Image",
+        "mimeType": "image/x-subpix",
+        "role": "Editor"
+      }
+    ]
   },
   "dependencies": {
     "lucide-react": "latest",

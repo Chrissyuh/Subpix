@@ -10,15 +10,17 @@ import type {
 
 const SUBPIX_FILTER = { name: "Subpixel Image", extensions: ["subpix"] };
 const PNG_FILTER = { name: "PNG Image", extensions: ["png"] };
+let mainWindow: BrowserWindow | null = null;
+let launchFilePath: string | null = getSubpixPathFromArgs(process.argv);
 
-function createWindow(): void {
-  const mainWindow = new BrowserWindow({
+function createWindow(): BrowserWindow {
+  mainWindow = new BrowserWindow({
     width: 1320,
     height: 860,
     minWidth: 1024,
     minHeight: 680,
     title: "Subpix",
-    backgroundColor: "#f4f6f8",
+    backgroundColor: "#050505",
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       contextIsolation: true,
@@ -37,10 +39,45 @@ function createWindow(): void {
   } else {
     void mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
   }
+
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+  });
+
+  return mainWindow;
 }
 
 function ensureExtension(filePath: string, extension: string): string {
   return filePath.toLowerCase().endsWith(`.${extension}`) ? filePath : `${filePath}.${extension}`;
+}
+
+function isSubpixPath(filePath: string): boolean {
+  return filePath.toLowerCase().endsWith(".subpix");
+}
+
+function getSubpixPathFromArgs(args: string[]): string | null {
+  return args.find((arg) => isSubpixPath(arg)) ?? null;
+}
+
+async function readSubpixFile(filePath: string): Promise<DesktopOpenResult> {
+  const content = await readFile(filePath, "utf8");
+  return { filePath, content };
+}
+
+async function openSubpixFileFromShell(filePath: string): Promise<void> {
+  if (!mainWindow) {
+    launchFilePath = filePath;
+    createWindow();
+    return;
+  }
+
+  if (mainWindow.isMinimized()) {
+    mainWindow.restore();
+  }
+
+  mainWindow.show();
+  mainWindow.focus();
+  mainWindow.webContents.send("subpix:file-opened", await readSubpixFile(filePath));
 }
 
 ipcMain.handle("subpix:open", async (): Promise<DesktopOpenResult | null> => {
@@ -55,8 +92,17 @@ ipcMain.handle("subpix:open", async (): Promise<DesktopOpenResult | null> => {
   }
 
   const filePath = result.filePaths[0];
-  const content = await readFile(filePath, "utf8");
-  return { filePath, content };
+  return readSubpixFile(filePath);
+});
+
+ipcMain.handle("subpix:get-launch-file", async (): Promise<DesktopOpenResult | null> => {
+  if (!launchFilePath) {
+    return null;
+  }
+
+  const filePath = launchFilePath;
+  launchFilePath = null;
+  return readSubpixFile(filePath);
 });
 
 ipcMain.handle(
@@ -101,14 +147,44 @@ ipcMain.handle(
   }
 );
 
-app.whenReady().then(() => {
-  createWindow();
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
 
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+if (!gotSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on("second-instance", (_event, commandLine) => {
+    const filePath = getSubpixPathFromArgs(commandLine);
+    if (filePath) {
+      void openSubpixFileFromShell(filePath);
+      return;
+    }
+
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore();
+      }
+      mainWindow.show();
+      mainWindow.focus();
     }
   });
+
+  app.whenReady().then(() => {
+    app.setName("Subpix");
+    createWindow();
+
+    app.on("activate", () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        createWindow();
+      }
+    });
+  });
+}
+
+app.on("open-file", (event, filePath) => {
+  event.preventDefault();
+  if (isSubpixPath(filePath)) {
+    void openSubpixFileFromShell(filePath);
+  }
 });
 
 app.on("window-all-closed", () => {
@@ -116,4 +192,3 @@ app.on("window-all-closed", () => {
     app.quit();
   }
 });
-

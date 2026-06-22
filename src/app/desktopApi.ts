@@ -30,6 +30,8 @@ const browserFallback: DesktopApi = {
   openSubpix: async (): Promise<DesktopOpenResult | null> => {
     throw new Error("Opening files is available in the Subpix desktop app.");
   },
+  getLaunchSubpixFile: async (): Promise<DesktopOpenResult | null> => null,
+  onOpenSubpixFile: () => () => undefined,
   saveSubpix: async (payload: DesktopSavePayload): Promise<DesktopSaveResult> => {
     downloadText(payload.content, payload.suggestedName, "image/x-subpix");
     return { filePath: payload.suggestedName };
@@ -47,4 +49,3 @@ export function getDesktopApi(): DesktopApi {
 export function isDesktopRuntime(): boolean {
   return Boolean(window.subpixDesktop);
 }
-

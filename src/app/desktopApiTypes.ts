@@ -21,7 +21,8 @@ export interface DesktopExportPngPayload {
 
 export interface DesktopApi {
   openSubpix: () => Promise<DesktopOpenResult | null>;
+  getLaunchSubpixFile: () => Promise<DesktopOpenResult | null>;
+  onOpenSubpixFile: (listener: (result: DesktopOpenResult) => void) => () => void;
   saveSubpix: (payload: DesktopSavePayload) => Promise<DesktopSaveResult | null>;
   exportPng: (payload: DesktopExportPngPayload) => Promise<DesktopSaveResult | null>;
 }
-

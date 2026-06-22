@@ -133,6 +133,8 @@ Create a Windows installer:
 npm run dist:win
 ```
 
+Windows builds register `.subpix` as a **Subpixel Image** file association. When Subpix is launched with a `.subpix` path, the desktop shell opens that file directly, and additional `.subpix` launches are routed into the existing app window.
+
 ## Exporting PNGs
 
 Open or create a `.subpix` document, choose a compatible RGB or BGR horizontal stripe display profile, then use **Export PNG**. Subpix packs the logical subpixel data into normal RGBA pixels with alpha set to 255.

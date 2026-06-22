@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactElement } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import {
   Brush,
   Download,
@@ -57,6 +57,7 @@ function formatError(error: unknown): string {
 
 export function App(): ReactElement {
   const { state, actions } = useDocumentStore();
+  const isDirtyRef = useRef(state.isDirty);
   const [tool, setTool] = useState<Tool>("brush");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [displayProfile, setDisplayProfile] = useState<DisplayProfileId>("rgb-horizontal");
@@ -70,11 +71,55 @@ export function App(): ReactElement {
   const renderOrder = getRenderOrder(document, displayProfile);
   const compatibilityMessage = getCompatibilityMessage(document, displayProfile);
   const suggestedBaseName = baseNameFromPath(state.filePath) || document.document.name || "Untitled";
+  const fileLabel = ensureSubpixFileName(suggestedBaseName);
+  const activeViewLabel =
+    viewMode === "grid" ? "Editable grid" : viewMode === "simulated" ? "Simulated preview" : "Packed preview";
   const windowTitle = `${state.isDirty ? "*" : ""}${ensureSubpixFileName(suggestedBaseName)} - Subpix`;
+
+  useEffect(() => {
+    isDirtyRef.current = state.isDirty;
+  }, [state.isDirty]);
 
   useEffect(() => {
     window.document.title = windowTitle;
   }, [windowTitle]);
+
+  useEffect(() => {
+    let disposed = false;
+    const desktopApi = getDesktopApi();
+
+    function openDesktopDocument(result: Awaited<ReturnType<typeof desktopApi.openSubpix>>): void {
+      if (!result || disposed) {
+        return;
+      }
+
+      if (isDirtyRef.current && !window.confirm("Discard unsaved changes?")) {
+        return;
+      }
+
+      try {
+        const nextDocument = loadSubpix(result.content);
+        actions.loadDocument(nextDocument, result.filePath);
+        setViewMode("grid");
+        setStatusMessage(`Opened ${ensureSubpixFileName(baseNameFromPath(result.filePath))}.`);
+      } catch (error) {
+        setStatusMessage(`Open failed: ${formatError(error)}`);
+      }
+    }
+
+    void desktopApi.getLaunchSubpixFile().then(openDesktopDocument).catch((error: unknown) => {
+      if (!disposed) {
+        setStatusMessage(`Open failed: ${formatError(error)}`);
+      }
+    });
+
+    const unsubscribe = desktopApi.onOpenSubpixFile(openDesktopDocument);
+
+    return () => {
+      disposed = true;
+      unsubscribe();
+    };
+  }, [actions]);
 
   useEffect(() => {
     if (viewMode === "packed" && !packedAvailable) {
@@ -207,6 +252,18 @@ export function App(): ReactElement {
   return (
     <div className="app-shell">
       <header className="top-bar">
+        <div className="brand-lockup" aria-label="Subpix">
+          <div className="brand-mark" aria-hidden="true">
+            <span className="brand-mark__slot brand-mark__slot--r" />
+            <span className="brand-mark__slot brand-mark__slot--g" />
+            <span className="brand-mark__slot brand-mark__slot--b" />
+          </div>
+          <div className="brand-copy">
+            <strong>Subpix</strong>
+            <span>Subpixel Image Studio</span>
+          </div>
+        </div>
+
         <div className="top-bar__group">
           <button className="command-button" onClick={handleNew}>
             <FilePlus2 size={16} />
@@ -263,6 +320,15 @@ export function App(): ReactElement {
               {mode.label}
             </button>
           ))}
+        </div>
+
+        <div className="document-strip" title={fileLabel}>
+          <span className={state.isDirty ? "document-strip__state is-dirty" : "document-strip__state"} />
+          <span className="document-strip__name">{fileLabel}</span>
+          <span className="document-strip__meta">
+            {document.document.widthPixels}x{document.document.heightPixels}px / {getWidthSubpixels(document)}x
+            {getHeightSubpixels(document)} cells
+          </span>
         </div>
 
         <label className="select-field">
@@ -339,6 +405,20 @@ export function App(): ReactElement {
       </main>
 
       <aside className="right-panel">
+        <section className="panel-section panel-section--identity">
+          <div className="identity-card">
+            <div className="identity-card__mark" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </div>
+            <div>
+              <h2>Subpixel Image</h2>
+              <p>{activeViewLabel}</p>
+            </div>
+          </div>
+        </section>
+
         <section className="panel-section">
           <h2>Document</h2>
           <dl>
@@ -395,7 +475,9 @@ export function App(): ReactElement {
 
       <footer className="status-bar" role="status">
         <span>{statusMessage}</span>
-        <span>{state.isDirty ? "Unsaved changes" : "Saved"}</span>
+        <span>
+          {activeViewLabel} / {state.isDirty ? "Unsaved changes" : "Saved"}
+        </span>
       </footer>
     </div>
   );
