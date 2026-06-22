@@ -74,6 +74,7 @@ The app includes three display profile options:
 - **Packed preview**: packs every three logical subpixel cells into one normal RGB pixel. This is the same packing used for PNG export.
 
 The preview buttons switch the canvas into simulated or packed preview. Selecting the active preview again, or selecting a drawing tool, returns to the editable grid.
+The right panel includes a **Subpixel Signal** readout that shows active logical slot counts and remaps the channel labels when switching between RGB and BGR display profiles.
 
 ## Tools
 
@@ -128,6 +129,12 @@ Build the app:
 
 ```sh
 npm run build
+```
+
+Run tests:
+
+```sh
+npm test
 ```
 
 Create a Windows installer:

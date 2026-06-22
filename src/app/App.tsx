@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { SubpixelCanvas } from "@/canvas/SubpixelCanvas";
 import { getDesktopApi, isDesktopRuntime } from "@/app/desktopApi";
+import { getSubpixDocumentStats } from "@/format/documentStats";
 import { createPackedPngBytes } from "@/format/exportPng";
 import { loadSubpix, SubpixLoadError } from "@/format/loadSubpix";
 import { saveSubpix } from "@/format/saveSubpix";
@@ -42,7 +43,6 @@ import {
   MIN_DOCUMENT_PIXELS,
   getCompatibilityMessage,
   getDisplayProfileLabel,
-  getExpectedDataLength,
   getHeightSubpixels,
   getRenderOrder,
   getWidthSubpixels,
@@ -99,6 +99,10 @@ function isEditableKeyboardTarget(target: EventTarget | null): boolean {
   );
 }
 
+function getSignalWidthPercent(normalizedIntensity: number): number {
+  return normalizedIntensity > 0 ? Math.max(2, Math.round(normalizedIntensity * 100)) : 0;
+}
+
 export function App(): ReactElement {
   const { state, actions } = useDocumentStore();
   const initialPreferences = useMemo(() => readAppPreferences(), []);
@@ -120,19 +124,7 @@ export function App(): ReactElement {
   const compatibilityMessage = getCompatibilityMessage(document, displayProfile);
   const suggestedBaseName = baseNameFromPath(state.filePath) || document.document.name || "Untitled";
   const fileLabel = ensureSubpixFileName(suggestedBaseName);
-  const documentStats = useMemo(() => {
-    const totalCells = getExpectedDataLength(document);
-    const activeCells = document.layers.reduce(
-      (count, layer) => count + layer.data.filter((cell) => cell > 0).length,
-      0
-    );
-
-    return {
-      activeCells,
-      coverage: totalCells > 0 ? (activeCells / totalCells) * 100 : 0,
-      totalCells
-    };
-  }, [document]);
+  const documentStats = useMemo(() => getSubpixDocumentStats(document, renderOrder), [document, renderOrder]);
   const activeViewLabel =
     viewMode === "grid" ? "Drawing grid" : viewMode === "simulated" ? "Simulated preview" : "Packed preview";
   const windowTitle = `${state.isDirty ? "*" : ""}${ensureSubpixFileName(suggestedBaseName)} - Subpix`;
@@ -655,6 +647,23 @@ export function App(): ReactElement {
               <dd>{getDisplayProfileLabel(displayProfile)}</dd>
             </div>
           </dl>
+        </section>
+
+        <section className="panel-section">
+          <h2>Subpixel Signal</h2>
+          <div className="signal-stack" aria-label="Subpixel slot activity">
+            {documentStats.slotActivities.map((activity) => (
+              <div className="signal-row" key={activity.slot}>
+                <div className={`signal-channel signal-channel--${activity.channel.toLowerCase()}`}>
+                  {activity.channel}
+                </div>
+                <div className="signal-meter" aria-label={`${activity.channel} activity`}>
+                  <span style={{ width: `${getSignalWidthPercent(activity.normalizedIntensity)}%` }} />
+                </div>
+                <div className="signal-value">{activity.activeCells}</div>
+              </div>
+            ))}
+          </div>
         </section>
 
         <section className="panel-section">

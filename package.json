@@ -9,6 +9,7 @@
     "dev": "electron-vite dev",
     "dev:renderer": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && electron-vite build",
+    "test": "vitest run",
     "preview": "electron-vite preview",
     "dist:win": "npm run build && electron-builder --win"
   },
@@ -40,6 +41,11 @@
     "react": "latest",
     "react-dom": "latest"
   },
+  "overrides": {
+    "vite": {
+      "esbuild": "0.27.2"
+    }
+  },
   "devDependencies": {
     "@swc/core": "latest",
     "@types/node": "latest",
@@ -50,6 +56,7 @@
     "electron-builder": "latest",
     "electron-vite": "^5.0.0",
     "typescript": "latest",
-    "vite": "^7.3.5"
+    "vite": "^7.3.5",
+    "vitest": "^4.1.9"
   }
 }
