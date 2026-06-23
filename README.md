@@ -172,20 +172,13 @@ Run tests:
 npm test
 ```
 
-Create a signed Windows installer:
+Create an unsigned Windows installer:
 
 ```sh
 npm run dist:win
 ```
 
-Signed installer builds require a Windows code-signing certificate. Set these environment variables before running the command:
-
-```sh
-CSC_LINK=path-or-url-or-base64-pfx
-CSC_KEY_PASSWORD=certificate-password
-```
-
-Subpix does not include a certificate. Public Windows releases require buying an OV or EV code-signing certificate for the final publisher identity. The packaging script verifies the installer with `Get-AuthenticodeSignature` and also runs `signtool verify /pa` when `signtool.exe` is available.
+Subpix intentionally builds unsigned Windows installers for now. Windows SmartScreen may warn that the installer is from an unknown publisher. The app can still be installed by choosing the advanced/run-anyway option.
 
 Create an unpacked local desktop build:
 
