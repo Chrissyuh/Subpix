@@ -240,6 +240,30 @@ export function SubpixelCanvas({
     }
   }, [document, dragState, ignoreColor, metrics, order, showGrid, showPixelBoundaries, zoom]);
 
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      return;
+    }
+
+    const targetCanvas = canvas;
+
+    function handleWheel(event: WheelEvent): void {
+      event.preventDefault();
+      const rect = targetCanvas.getBoundingClientRect();
+      onWheelZoom({
+        canvasX: event.clientX - rect.left,
+        canvasY: event.clientY - rect.top,
+        clientX: event.clientX,
+        clientY: event.clientY,
+        direction: event.deltaY < 0 ? 1 : -1
+      });
+    }
+
+    targetCanvas.addEventListener("wheel", handleWheel, { passive: false });
+    return () => targetCanvas.removeEventListener("wheel", handleWheel);
+  }, [onWheelZoom]);
+
   function getCellFromPointer(event: React.PointerEvent<HTMLCanvasElement>): { x: number; y: number } | null {
     const rect = event.currentTarget.getBoundingClientRect();
     const x = Math.floor((event.clientX - rect.left) / metrics.subpixelCellWidth);
@@ -368,18 +392,6 @@ export function SubpixelCanvas({
     }
   }
 
-  function handleWheel(event: React.WheelEvent<HTMLCanvasElement>): void {
-    event.preventDefault();
-    const rect = event.currentTarget.getBoundingClientRect();
-    onWheelZoom({
-      canvasX: event.clientX - rect.left,
-      canvasY: event.clientY - rect.top,
-      clientX: event.clientX,
-      clientY: event.clientY,
-      direction: event.deltaY < 0 ? 1 : -1
-    });
-  }
-
   function originAdjustedCell(cell: CellPoint): CellPoint {
     return {
       x: cell.x - Math.floor(getWidthSubpixels(document) / 2),
@@ -399,7 +411,6 @@ export function SubpixelCanvas({
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         onPointerLeave={() => setPointerCell(null)}
-        onWheel={handleWheel}
       />
       {pointerCell ? (
         <div className="cell-readout">
