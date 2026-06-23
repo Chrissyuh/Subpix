@@ -63,35 +63,35 @@ button {
 }
 
 .brand-mark {
-  display: grid;
-  grid-template-columns: repeat(3, 5px);
-  grid-template-rows: 19px;
-  place-content: center;
-  gap: 2px;
-  width: 29px;
-  height: 29px;
-  padding: 4px;
-  border: 1px solid #ffffff;
-  border-radius: 7px;
-  background: #050505;
-  box-shadow: inset 0 0 0 1px #2c2c2c;
+  display: block;
+  flex: 0 0 31px;
+  width: 31px;
+  height: 31px;
+  overflow: visible;
 }
 
-.brand-mark__slot {
-  min-width: 0;
-  border-radius: 2px;
+.brand-mark__shell {
+  fill: #050505;
+  stroke: #ffffff;
+  stroke-width: 1px;
+}
+
+.brand-mark__inner {
+  fill: none;
+  stroke: #2c2c2c;
+  stroke-width: 1px;
 }
 
 .brand-mark__slot--r {
-  background: #ff3b3b;
+  fill: #ff3b3b;
 }
 
 .brand-mark__slot--g {
-  background: #40ff76;
+  fill: #40ff76;
 }
 
 .brand-mark__slot--b {
-  background: #4b7dff;
+  fill: #4b7dff;
 }
 
 .brand-copy {

@@ -700,11 +700,13 @@ export function App(): ReactElement {
     <div className={isInspectorCollapsed ? "app-shell app-shell--inspector-collapsed" : "app-shell"}>
       <header className="top-bar">
         <div className="brand-lockup" aria-label="Subpix">
-          <div className="brand-mark" aria-hidden="true">
-            <span className="brand-mark__slot brand-mark__slot--r" />
-            <span className="brand-mark__slot brand-mark__slot--g" />
-            <span className="brand-mark__slot brand-mark__slot--b" />
-          </div>
+          <svg className="brand-mark" aria-hidden="true" viewBox="0 0 31 31">
+            <rect className="brand-mark__shell" x="0.5" y="0.5" width="30" height="30" rx="5.5" />
+            <rect className="brand-mark__inner" x="2.5" y="2.5" width="26" height="26" rx="4" />
+            <rect className="brand-mark__slot brand-mark__slot--r" x="6" y="6" width="5" height="19" rx="2" />
+            <rect className="brand-mark__slot brand-mark__slot--g" x="13" y="6" width="5" height="19" rx="2" />
+            <rect className="brand-mark__slot brand-mark__slot--b" x="20" y="6" width="5" height="19" rx="2" />
+          </svg>
           <div className="brand-copy">
             <strong>Subpix</strong>
             <span>Subpixel Image Studio</span>
