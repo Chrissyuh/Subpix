@@ -1009,7 +1009,6 @@ export function App(): ReactElement {
           showGrid={showGrid}
           showPixelBoundaries={showPixelBoundaries}
           onBeginStroke={actions.beginStroke}
-          onPaintCell={actions.paintCell}
           onPaintCells={actions.paintCells}
           onEndStroke={actions.endStroke}
           onWheelZoom={adjustZoomByWheel}

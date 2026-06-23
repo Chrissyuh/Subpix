@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import { renderSimulatedView } from "@/canvas/renderSimulatedView";
+import { lineCells, type CellPoint } from "@/canvas/strokeGeometry";
 import {
   getHeightSubpixels,
   getWidthSubpixels,
@@ -13,11 +14,6 @@ interface CanvasMetrics {
   height: number;
   subpixelCellWidth: number;
   subpixelCellHeight: number;
-}
-
-interface CellPoint {
-  x: number;
-  y: number;
 }
 
 interface DragState {
@@ -44,7 +40,6 @@ export interface SubpixelCanvasProps {
   showGrid: boolean;
   showPixelBoundaries: boolean;
   onBeginStroke: () => void;
-  onPaintCell: (x: number, y: number, intensity: number) => void;
   onPaintCells: (cells: CellPoint[], intensity: number) => void;
   onEndStroke: () => void;
   onWheelZoom: (anchor: WheelZoomAnchor) => void;
@@ -89,34 +84,6 @@ function lockLineToAxis(start: CellPoint, current: CellPoint, shiftKey: boolean)
   return Math.abs(current.x - start.x) >= Math.abs(current.y - start.y)
     ? { x: current.x, y: start.y }
     : { x: start.x, y: current.y };
-}
-
-function lineCells(start: CellPoint, end: CellPoint): CellPoint[] {
-  const cells: CellPoint[] = [];
-  let x = start.x;
-  let y = start.y;
-  const dx = Math.abs(end.x - start.x);
-  const dy = Math.abs(end.y - start.y);
-  const sx = start.x < end.x ? 1 : -1;
-  const sy = start.y < end.y ? 1 : -1;
-  let error = dx - dy;
-
-  while (true) {
-    cells.push({ x, y });
-    if (x === end.x && y === end.y) {
-      return cells;
-    }
-
-    const doubledError = error * 2;
-    if (doubledError > -dy) {
-      error -= dy;
-      x += sx;
-    }
-    if (doubledError < dx) {
-      error += dx;
-      y += sy;
-    }
-  }
 }
 
 function rectangleCells(start: CellPoint, current: CellPoint, fill: boolean): CellPoint[] {
@@ -226,14 +193,13 @@ export function SubpixelCanvas({
   showGrid,
   showPixelBoundaries,
   onBeginStroke,
-  onPaintCell,
   onPaintCells,
   onEndStroke,
   onWheelZoom
 }: SubpixelCanvasProps): ReactElement {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawingRef = useRef(false);
-  const lastPaintedRef = useRef<string | null>(null);
+  const lastBrushCellRef = useRef<CellPoint | null>(null);
   const panRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
   const [pointerCell, setPointerCell] = useState<{ x: number; y: number } | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
@@ -288,14 +254,14 @@ export function SubpixelCanvas({
     return { x, y };
   }
 
-  function paintCell(cell: { x: number; y: number }): void {
-    const key = `${cell.x}:${cell.y}`;
-    if (lastPaintedRef.current === key) {
+  function paintBrushSegment(cell: CellPoint): void {
+    const lastCell = lastBrushCellRef.current;
+    if (lastCell && lastCell.x === cell.x && lastCell.y === cell.y) {
       return;
     }
 
-    lastPaintedRef.current = key;
-    onPaintCell(cell.x, cell.y, tool === "brush" ? 255 : 0);
+    onPaintCells(lastCell ? lineCells(lastCell, cell) : [cell], tool === "brush" ? 255 : 0);
+    lastBrushCellRef.current = cell;
   }
 
   function scrollWorkspace(event: React.PointerEvent<HTMLCanvasElement>): void {
@@ -333,9 +299,9 @@ export function SubpixelCanvas({
 
     if (isBrushTool(tool)) {
       drawingRef.current = true;
-      lastPaintedRef.current = null;
+      lastBrushCellRef.current = null;
       onBeginStroke();
-      paintCell(cell);
+      paintBrushSegment(cell);
       return;
     }
 
@@ -372,7 +338,7 @@ export function SubpixelCanvas({
     }
 
     if (drawingRef.current) {
-      paintCell(cell);
+      paintBrushSegment(cell);
     }
   }
 
@@ -397,7 +363,7 @@ export function SubpixelCanvas({
 
     if (drawingRef.current) {
       drawingRef.current = false;
-      lastPaintedRef.current = null;
+      lastBrushCellRef.current = null;
       onEndStroke();
     }
   }
