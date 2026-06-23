@@ -121,6 +121,7 @@ The Electron build includes native desktop menus for common work:
 - **Display**: RGB stripe, BGR stripe, and incompatible simulated-only profiles
 
 These menu actions are routed through the same editor commands as the toolbar and keyboard shortcuts.
+The desktop build also protects unsaved edits when opening another `.subpix` file, creating a new document, or closing/quitting the app.
 
 ## Validation
 
@@ -171,21 +172,39 @@ Run tests:
 npm test
 ```
 
-Create an unpacked Windows desktop build:
+Create a signed Windows installer:
 
 ```sh
 npm run dist:win
 ```
 
-The default Windows build writes to `%TEMP%\subpix-release\win-unpacked\Subpix.exe` so OneDrive project-folder locking does not interfere with packaging. Set `SUBPIX_WIN_OUTPUT_DIR` before running the command to choose a different output directory.
-
-Installer packaging is kept separate:
+Signed installer builds require a Windows code-signing certificate. Set these environment variables before running the command:
 
 ```sh
-npm run dist:win:installer
+CSC_LINK=path-or-url-or-base64-pfx
+CSC_KEY_PASSWORD=certificate-password
 ```
 
-Installer builds register `.subpix` as a **Subpixel Image** file association. When Subpix is launched with a `.subpix` path, the desktop shell opens that file directly, and additional `.subpix` launches are routed into the existing app window.
+Subpix does not include a certificate. Public Windows releases require buying an OV or EV code-signing certificate for the final publisher identity. The packaging script verifies the installer with `Get-AuthenticodeSignature` and also runs `signtool verify /pa` when `signtool.exe` is available.
+
+Create an unpacked local desktop build:
+
+```sh
+npm run dist:win:unpacked
+```
+
+Windows build output defaults to `%LOCALAPPDATA%\Subpix\release` so OneDrive project-folder locking does not interfere with packaging. Set `SUBPIX_WIN_OUTPUT_DIR` before running a packaging command to choose a different output directory.
+
+Installer builds use a per-user assisted NSIS installer with Start menu and desktop shortcuts, uninstall support, run-after-install, and `.subpix` registered as a **Subpixel Image** file association. When Subpix is launched with a `.subpix` path, the desktop shell opens that file directly, and additional `.subpix` launches are routed into the existing app window.
+
+Packaged app QA before release:
+
+- Install Subpix, launch it from the Start menu, and verify the app icon.
+- Create a document, draw, save, reopen, and export PNG.
+- Double-click a `.subpix` file and verify it opens in Subpix.
+- Launch a second `.subpix` file while Subpix is already open and verify it routes into the existing window.
+- Try closing with unsaved edits and verify cancel and discard both work.
+- Uninstall and verify shortcuts and the `.subpix` association are removed.
 
 ## Exporting PNGs
 

@@ -175,11 +175,24 @@ export function App(): ReactElement {
 
   useEffect(() => {
     isDirtyRef.current = state.isDirty;
+    getDesktopApi().setDirtyState(state.isDirty);
   }, [state.isDirty]);
 
   useEffect(() => {
     window.document.title = windowTitle;
   }, [windowTitle]);
+
+  useEffect(() => {
+    const desktopApi = getDesktopApi();
+    return desktopApi.onCloseRequest(() => {
+      const allowClose = !isDirtyRef.current || window.confirm("Discard unsaved changes and close Subpix?");
+      if (!allowClose) {
+        setStatusMessage("Close canceled.");
+      }
+
+      desktopApi.confirmClose(allowClose);
+    });
+  }, []);
 
   useEffect(() => {
     writeAppPreferences({

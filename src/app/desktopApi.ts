@@ -100,6 +100,9 @@ const browserFallback: DesktopApi = {
   getLaunchSubpixFile: async (): Promise<DesktopOpenResult | null> => null,
   onOpenSubpixFile: () => () => undefined,
   onAppCommand: () => () => undefined,
+  onCloseRequest: () => () => undefined,
+  setDirtyState: () => undefined,
+  confirmClose: () => undefined,
   saveSubpix: async (payload: DesktopSavePayload): Promise<DesktopSaveResult> => {
     downloadText(payload.content, payload.suggestedName, SUBPIX_INTERNAL_MIME);
     return { filePath: payload.suggestedName };

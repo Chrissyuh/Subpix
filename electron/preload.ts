@@ -21,6 +21,13 @@ const api: DesktopApi = {
     ipcRenderer.on("subpix:app-command", handler);
     return () => ipcRenderer.removeListener("subpix:app-command", handler);
   },
+  onCloseRequest: (listener) => {
+    const handler = (): void => listener();
+    ipcRenderer.on("subpix:close-requested", handler);
+    return () => ipcRenderer.removeListener("subpix:close-requested", handler);
+  },
+  setDirtyState: (isDirty) => ipcRenderer.send("subpix:set-dirty-state", isDirty),
+  confirmClose: (allowClose) => ipcRenderer.send("subpix:close-response", allowClose),
   saveSubpix: (payload: DesktopSavePayload) =>
     ipcRenderer.invoke("subpix:save", payload) as Promise<DesktopSaveResult | null>,
   exportPng: (payload: DesktopExportPngPayload) =>

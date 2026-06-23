@@ -53,6 +53,9 @@ export interface DesktopApi {
   getLaunchSubpixFile: () => Promise<DesktopOpenResult | null>;
   onOpenSubpixFile: (listener: (result: DesktopOpenResult) => void) => () => void;
   onAppCommand: (listener: (command: DesktopAppCommand) => void) => () => void;
+  onCloseRequest: (listener: () => void) => () => void;
+  setDirtyState: (isDirty: boolean) => void;
+  confirmClose: (allowClose: boolean) => void;
   saveSubpix: (payload: DesktopSavePayload) => Promise<DesktopSaveResult | null>;
   exportPng: (payload: DesktopExportPngPayload) => Promise<DesktopSaveResult | null>;
 }

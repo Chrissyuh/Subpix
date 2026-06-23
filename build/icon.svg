@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Subpix icon">
+  <rect width="256" height="256" rx="56" fill="#080808"/>
+  <rect x="24" y="24" width="208" height="208" rx="34" fill="#111111" stroke="#ffffff" stroke-width="12"/>
+  <rect x="52" y="52" width="40" height="152" rx="12" fill="#ff4056"/>
+  <rect x="108" y="52" width="40" height="152" rx="12" fill="#3cff77"/>
+  <rect x="164" y="52" width="40" height="152" rx="12" fill="#5294ff"/>
+</svg>

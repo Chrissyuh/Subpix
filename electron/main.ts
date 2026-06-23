@@ -9,7 +9,7 @@ import {
   type MessageBoxOptions
 } from "electron";
 import { readFile, rename, rm, writeFile } from "node:fs/promises";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import type {
   DesktopAppCommand,
   DesktopExportPngPayload,
@@ -23,6 +23,13 @@ const SUBPIX_FILTER = { name: "Subpixel Image", extensions: ["subpix"] };
 const PNG_FILTER = { name: "PNG Image", extensions: ["png"] };
 let mainWindow: BrowserWindow | null = null;
 let launchFilePath: string | null = getSubpixPathFromArgs(process.argv);
+let rendererHasUnsavedChanges = false;
+let closeRequestPending = false;
+let forceWindowClose = false;
+
+function getWindowIconPath(): string {
+  return app.isPackaged ? join(process.resourcesPath, "icon.ico") : resolve("build", "icon.ico");
+}
 
 function createWindow(): BrowserWindow {
   mainWindow = new BrowserWindow({
@@ -31,6 +38,7 @@ function createWindow(): BrowserWindow {
     minWidth: 1024,
     minHeight: 680,
     title: "Subpix",
+    icon: getWindowIconPath(),
     backgroundColor: "#050505",
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
@@ -51,7 +59,24 @@ function createWindow(): BrowserWindow {
     void mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
   }
 
+  mainWindow.on("close", (event) => {
+    if (forceWindowClose || !rendererHasUnsavedChanges) {
+      return;
+    }
+
+    event.preventDefault();
+    if (closeRequestPending) {
+      return;
+    }
+
+    closeRequestPending = true;
+    mainWindow?.webContents.send("subpix:close-requested");
+  });
+
   mainWindow.on("closed", () => {
+    rendererHasUnsavedChanges = false;
+    closeRequestPending = false;
+    forceWindowClose = false;
     mainWindow = null;
   });
 
@@ -283,6 +308,20 @@ ipcMain.handle(
     return { filePath: targetPath };
   }
 );
+
+ipcMain.on("subpix:set-dirty-state", (_event, isDirty: boolean) => {
+  rendererHasUnsavedChanges = isDirty;
+});
+
+ipcMain.on("subpix:close-response", (_event, allowClose: boolean) => {
+  closeRequestPending = false;
+  if (!allowClose || !mainWindow) {
+    return;
+  }
+
+  forceWindowClose = true;
+  mainWindow.close();
+});
 
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 

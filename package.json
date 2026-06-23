@@ -12,27 +12,51 @@
     "build": "tsc --noEmit && electron-vite build",
     "test": "vitest run",
     "preview": "electron-vite preview",
-    "dist:win": "npm run build && node scripts/package-win.mjs",
-    "dist:win:installer": "npm run build && electron-builder --win"
+    "dist:win": "npm run build && node scripts/package-win.mjs installer",
+    "dist:win:installer": "npm run build && node scripts/package-win.mjs installer",
+    "dist:win:unpacked": "npm run build && node scripts/package-win.mjs unpacked"
   },
   "build": {
-    "appId": "dev.subpix.app",
+    "appId": "io.github.chrissyuh.subpix",
     "productName": "Subpix",
     "directories": {
+      "buildResources": "build",
       "output": "release"
     },
     "files": [
-      "out/**/*"
+      "out/**/*",
+      "build/icon.ico"
+    ],
+    "extraResources": [
+      {
+        "from": "build/icon.ico",
+        "to": "icon.ico"
+      }
     ],
     "win": {
+      "icon": "build/icon.ico",
       "target": "nsis",
-      "artifactName": "Subpix-${version}-${arch}.${ext}"
+      "artifactName": "Subpix-Setup-${version}-${arch}.${ext}",
+      "forceCodeSigning": true
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true,
+      "shortcutName": "Subpix",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico"
     },
     "fileAssociations": [
       {
         "ext": "subpix",
         "name": "Subpixel Image",
         "description": "Subpix Subpixel Image",
+        "icon": "build/icon.ico",
         "mimeType": "image/x-subpix",
         "role": "Editor"
       }
