@@ -353,14 +353,16 @@ button {
 }
 
 .left-toolbar {
+  grid-column: 1;
   grid-row: 2;
+  position: relative;
+  z-index: 40;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
   padding: 12px 0;
-  overflow-y: auto;
-  overflow-x: visible;
+  overflow: visible;
   border-right: 1px solid #2c2c2c;
   background: #0c0c0c;
 }
@@ -376,6 +378,7 @@ button {
   grid-column: 2;
   grid-row: 2;
   position: relative;
+  z-index: 0;
   overflow: auto;
   padding: 24px;
   background:
@@ -417,7 +420,7 @@ button {
   position: absolute;
   left: 48px;
   bottom: 0;
-  z-index: 20;
+  z-index: 60;
   display: flex;
   gap: 6px;
   padding: 6px;
