@@ -1205,7 +1205,6 @@ export function App(): ReactElement {
             onClick={() => setIsInspectorCollapsed(false)}
           >
             <PanelRightOpen size={18} />
-            <span>Info</span>
           </button>
         ) : (
           <>

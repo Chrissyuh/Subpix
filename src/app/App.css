@@ -40,7 +40,7 @@ button {
 }
 
 .app-shell--inspector-collapsed {
-  grid-template-columns: 64px minmax(0, 1fr) 46px;
+  grid-template-columns: 64px minmax(0, 1fr) 42px;
 }
 
 .top-bar {
@@ -488,7 +488,7 @@ button {
 }
 
 .app-shell--inspector-collapsed .cell-readout {
-  right: 70px;
+  right: 66px;
 }
 
 .right-panel {
@@ -500,35 +500,30 @@ button {
 }
 
 .right-panel--collapsed {
-  display: grid;
-  align-content: start;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
   overflow: hidden;
+  padding-top: 10px;
 }
 
 .inspector-rail-button {
-  display: grid;
-  justify-items: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 128px;
-  padding: 12px 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #343434;
+  border-radius: 6px;
   color: #f1f1f1;
-  background: transparent;
+  background: #141414;
   cursor: pointer;
 }
 
 .inspector-rail-button:hover {
+  border-color: #ffffff;
   color: #050505;
   background: #ffffff;
-}
-
-.inspector-rail-button span {
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0;
-  text-transform: uppercase;
 }
 
 .panel-section {
@@ -853,7 +848,7 @@ dd {
   }
 
   .app-shell.app-shell--inspector-collapsed {
-    grid-template-columns: 58px minmax(0, 1fr) 46px;
+    grid-template-columns: 58px minmax(0, 1fr) 42px;
   }
 
   .brand-copy span,
