@@ -172,6 +172,20 @@ Run tests:
 npm test
 ```
 
+Run the product website locally:
+
+```sh
+npm run dev:site
+```
+
+Build the product website:
+
+```sh
+npm run build:site
+```
+
+The static product site is written to `site-dist`. Its Windows download button points to the latest GitHub release: <https://github.com/Chrissyuh/Subpix/releases/latest>.
+
 Create an unsigned Windows installer:
 
 ```sh

@@ -9,8 +9,11 @@
   "scripts": {
     "dev": "electron-vite dev",
     "dev:renderer": "vite --host 127.0.0.1",
+    "dev:site": "vite --config vite.site.config.ts --host 127.0.0.1",
     "build": "tsc --noEmit && electron-vite build",
+    "build:site": "vite build --config vite.site.config.ts",
     "test": "vitest run",
+    "preview:site": "vite preview --config vite.site.config.ts --host 127.0.0.1",
     "preview": "electron-vite preview",
     "dist:win": "npm run build && node scripts/package-win.mjs installer",
     "dist:win:installer": "npm run build && node scripts/package-win.mjs installer",
