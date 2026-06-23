@@ -85,7 +85,7 @@ It also includes an **Export** readout with PNG size, RGBA byte count, render or
 - Ellipse outlines and filled ellipses
 - Clear canvas
 - Undo and redo
-- Zoom in and out, including mouse-wheel zoom over the canvas
+- Zoom in and out, including mouse-wheel zoom centered on the cursor
 - Zoom to drawing, which recenters the viewport around active artwork or the canvas origin
 - Combined grid menu with grid and pixel-boundary toggles
 - Calibration and slot-sweep pattern insertion

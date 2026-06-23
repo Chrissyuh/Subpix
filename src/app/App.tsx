@@ -24,8 +24,10 @@ import {
   ZoomOut
 } from "lucide-react";
 import { SubpixelCanvas } from "@/canvas/SubpixelCanvas";
+import type { WheelZoomAnchor } from "@/canvas/SubpixelCanvas";
 import { getDesktopApi } from "@/app/desktopApi";
 import type { DesktopAppCommand } from "@/app/desktopApiTypes";
+import { getCursorAnchoredScroll } from "@/app/zoomMath";
 import { getSubpixDocumentStats } from "@/format/documentStats";
 import { getExportReadiness } from "@/format/exportReadiness";
 import { createPackedPngBytes, getCompositeSubpixelIntensities } from "@/format/exportPng";
@@ -583,10 +585,35 @@ export function App(): ReactElement {
     setStatusMessage(`Zoom set to ${clampedZoom}px.`);
   }
 
-  function adjustZoomByWheel(direction: 1 | -1): void {
-    const nextZoom = clampZoom(zoom + direction * ZOOM_STEP);
+  function adjustZoomByWheel(anchor: WheelZoomAnchor): void {
+    const workspace = workspaceRef.current;
+    const nextZoom = clampZoom(zoom + anchor.direction * ZOOM_STEP);
     if (nextZoom !== zoom) {
+      const workspaceRect = workspace?.getBoundingClientRect();
+      const nextScroll =
+        workspace && workspaceRect
+          ? getCursorAnchoredScroll(
+              anchor,
+              {
+                rectLeft: workspaceRect.left,
+                rectTop: workspaceRect.top,
+                scrollLeft: workspace.scrollLeft,
+                scrollTop: workspace.scrollTop
+              },
+              zoom,
+              nextZoom
+            )
+          : null;
+
       setZoom(nextZoom);
+
+      if (workspace && nextScroll) {
+        window.requestAnimationFrame(() => {
+          workspace.scrollLeft = nextScroll.scrollLeft;
+          workspace.scrollTop = nextScroll.scrollTop;
+        });
+      }
+
       setStatusMessage(`Zoom set to ${nextZoom}px.`);
     }
   }

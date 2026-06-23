@@ -27,6 +27,14 @@ interface DragState {
   tool: Tool;
 }
 
+export interface WheelZoomAnchor {
+  canvasX: number;
+  canvasY: number;
+  clientX: number;
+  clientY: number;
+  direction: 1 | -1;
+}
+
 export interface SubpixelCanvasProps {
   document: SubpixDocument;
   order: SubpixOrder;
@@ -38,7 +46,7 @@ export interface SubpixelCanvasProps {
   onPaintCell: (x: number, y: number, intensity: number) => void;
   onPaintCells: (cells: CellPoint[], intensity: number) => void;
   onEndStroke: () => void;
-  onWheelZoom: (direction: 1 | -1) => void;
+  onWheelZoom: (anchor: WheelZoomAnchor) => void;
 }
 
 function getCanvasMetrics(document: SubpixDocument, zoom: number): CanvasMetrics {
@@ -393,7 +401,14 @@ export function SubpixelCanvas({
 
   function handleWheel(event: React.WheelEvent<HTMLCanvasElement>): void {
     event.preventDefault();
-    onWheelZoom(event.deltaY < 0 ? 1 : -1);
+    const rect = event.currentTarget.getBoundingClientRect();
+    onWheelZoom({
+      canvasX: event.clientX - rect.left,
+      canvasY: event.clientY - rect.top,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      direction: event.deltaY < 0 ? 1 : -1
+    });
   }
 
   function originAdjustedCell(cell: CellPoint): CellPoint {
