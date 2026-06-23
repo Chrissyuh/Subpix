@@ -76,12 +76,6 @@ function ProductCanvas(): ReactElement {
     context.arc(originX + (columns * cellW) / 2, originY + (rows * cellH) / 2, 4, 0, Math.PI * 2);
     context.fill();
 
-    context.fillStyle = "rgba(255,255,255,0.92)";
-    context.font = "700 14px Inter, Segoe UI, sans-serif";
-    context.fillText("logical subpixels", 30, 34);
-    context.fillStyle = "rgba(255,255,255,0.55)";
-    context.font = "12px Inter, Segoe UI, sans-serif";
-    context.fillText("RGB/BGR horizontal stripe artwork preview", 30, 54);
   }, []);
 
   return <canvas aria-label="Subpix editor preview" className="product-canvas" ref={canvasRef} />;
@@ -94,6 +88,19 @@ function BrandMark(): ReactElement {
       <rect className="site-brand-mark__slot site-brand-mark__slot--r" x="7" y="7" width="6" height="20" rx="2" />
       <rect className="site-brand-mark__slot site-brand-mark__slot--g" x="14" y="7" width="6" height="20" rx="2" />
       <rect className="site-brand-mark__slot site-brand-mark__slot--b" x="21" y="7" width="6" height="20" rx="2" />
+    </svg>
+  );
+}
+
+function GitHubMark(): ReactElement {
+  return (
+    <svg aria-hidden="true" className="github-mark" viewBox="0 0 98 96">
+      <path
+        fill="currentColor"
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M48.85 0C21.88 0 0 21.88 0 48.85c0 21.58 13.99 39.89 33.39 46.35 2.44.45 3.34-1.06 3.34-2.35 0-1.16-.04-4.23-.07-8.3-13.58 2.95-16.44-6.54-16.44-6.54-2.22-5.64-5.42-7.14-5.42-7.14-4.43-3.03.34-2.97.34-2.97 4.9.34 7.48 5.03 7.48 5.03 4.35 7.45 11.41 5.3 14.2 4.05.44-3.15 1.7-5.3 3.1-6.52-10.84-1.23-22.24-5.42-22.24-24.14 0-5.33 1.9-9.69 5.03-13.1-.5-1.24-2.18-6.21.48-12.94 0 0 4.1-1.31 13.43 5.01a46.72 46.72 0 0 1 24.44 0c9.33-6.32 13.42-5.01 13.42-5.01 2.67 6.73.99 11.7.49 12.94 3.13 3.41 5.02 7.77 5.02 13.1 0 18.77-11.42 22.89-22.3 24.1 1.75 1.51 3.31 4.49 3.31 9.05 0 6.53-.06 11.8-.06 13.4 0 1.3.88 2.82 3.36 2.34C83.87 88.72 97.7 70.42 97.7 48.85 97.7 21.88 75.83 0 48.85 0Z"
+      />
     </svg>
   );
 }
@@ -116,7 +123,6 @@ export function Site(): ReactElement {
 
       <section className="hero" id="top">
         <div className="hero__copy">
-          <p className="eyebrow">Open-source Windows desktop editor</p>
           <h1>Subpix</h1>
           <p className="hero__lede">
             Create, inspect, and export logical subpixel artwork with a real `.subpix` file format built for
@@ -128,9 +134,7 @@ export function Site(): ReactElement {
               Download for Windows
             </a>
             <a className="button" href={GITHUB_URL}>
-              <span className="button__mark" aria-hidden="true">
-                GH
-              </span>
+              <GitHubMark />
               View on GitHub
             </a>
           </div>
@@ -207,15 +211,6 @@ export function Site(): ReactElement {
             <li>RGB and BGR display profiles</li>
             <li>Custom documents from 1 x 1 to 512 x 512 real pixels</li>
             <li>Binary drawing now, 0-255 intensity stored for later tools</li>
-          </ul>
-        </article>
-        <article>
-          <h2>What v1 does not pretend to support</h2>
-          <ul>
-            <li>No true physical mode for OLED, PenTile, or diamond layouts</li>
-            <li>No binary `.subpix` container yet</li>
-            <li>No guarantee that OS/browser scaling gives exact 1:1 physical output</li>
-            <li>No auto-update channel yet</li>
           </ul>
         </article>
       </section>
