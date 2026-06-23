@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactElement } from "react";
-import { Download, FileJson, Monitor, Paintbrush, ShieldAlert } from "lucide-react";
+import { Download, FileJson, Monitor, Paintbrush, ShieldAlert, Workflow } from "lucide-react";
 import "./Site.css";
 
 const DOWNLOAD_URL = "https://github.com/Chrissyuh/Subpix/releases/latest";
@@ -107,6 +107,7 @@ export function Site(): ReactElement {
           <span>Subpix</span>
         </a>
         <div className="site-nav__links">
+          <a href="#workflow">Workflow</a>
           <a href="#format">Format</a>
           <a href="#compatibility">Compatibility</a>
           <a href={GITHUB_URL}>GitHub</a>
@@ -140,6 +141,30 @@ export function Site(): ReactElement {
         </div>
       </section>
 
+      <section className="workflow-section" id="workflow">
+        <div className="section-heading">
+          <p className="eyebrow">Editor workflow</p>
+          <h2>Make the source image, then export pixels</h2>
+        </div>
+        <div className="workflow-steps">
+          <article>
+            <span>1</span>
+            <h3>Create or open</h3>
+            <p>Start a `.subpix` document, choose RGB or BGR stripe order, and work on a large simulated grid.</p>
+          </article>
+          <article>
+            <span>2</span>
+            <h3>Draw subpixels</h3>
+            <p>Use brush, cell eraser, box eraser, lines, rectangles, ellipses, grid controls, and undo/redo.</p>
+          </article>
+          <article>
+            <span>3</span>
+            <h3>Save and export</h3>
+            <p>Save the editable JSON-backed source file, or pack logical slots into a normal PNG for use elsewhere.</p>
+          </article>
+        </div>
+      </section>
+
       <section className="feature-grid" aria-label="Subpix features">
         <article>
           <Paintbrush size={22} />
@@ -156,6 +181,11 @@ export function Site(): ReactElement {
           <h2>Preview and export</h2>
           <p>Use the simulated canvas on any display, then export a packed PNG for compatible horizontal stripe screens.</p>
         </article>
+        <article>
+          <Workflow size={22} />
+          <h2>Built like a desktop tool</h2>
+          <p>Native menus, file associations, dirty-close protection, and Windows installer builds are part of the app.</p>
+        </article>
       </section>
 
       <section className="info-band" id="format">
@@ -167,6 +197,27 @@ export function Site(): ReactElement {
           Subpix files use the `.subpix` extension and store `image/x-subpix` data with document dimensions,
           horizontal-stripe architecture metadata, and 0-255 intensity values for every logical subpixel cell.
         </p>
+      </section>
+
+      <section className="details-grid" aria-label="Subpix v1 details">
+        <article>
+          <h2>What v1 supports</h2>
+          <ul>
+            <li>Horizontal 3 x 1 stripe subpixels</li>
+            <li>RGB and BGR display profiles</li>
+            <li>Custom documents from 1 x 1 to 512 x 512 real pixels</li>
+            <li>Binary drawing now, 0-255 intensity stored for later tools</li>
+          </ul>
+        </article>
+        <article>
+          <h2>What v1 does not pretend to support</h2>
+          <ul>
+            <li>No true physical mode for OLED, PenTile, or diamond layouts</li>
+            <li>No binary `.subpix` container yet</li>
+            <li>No guarantee that OS/browser scaling gives exact 1:1 physical output</li>
+            <li>No auto-update channel yet</li>
+          </ul>
+        </article>
       </section>
 
       <section className="split-section" id="compatibility">
@@ -186,6 +237,21 @@ export function Site(): ReactElement {
             displays and export PNG only from a compatible RGB or BGR profile.
           </p>
         </div>
+      </section>
+
+      <section className="download-panel" id="download">
+        <div>
+          <p className="eyebrow">Windows release</p>
+          <h2>Download the latest installer from GitHub</h2>
+          <p>
+            Current builds target x64 Windows and use an unsigned assisted NSIS installer. The installer creates Start
+            menu and desktop shortcuts, adds an uninstall entry, and registers `.subpix` files with Subpix.
+          </p>
+        </div>
+        <a className="button button--primary" href={DOWNLOAD_URL}>
+          <Download size={18} />
+          Download for Windows
+        </a>
       </section>
 
       <footer className="site-footer">
