@@ -20,6 +20,7 @@ The `.subpix` format stores the artwork as logical subpixel cells plus architect
 ## Current File Format
 
 Version 1 uses readable JSON saved with a `.subpix` extension. The internal MIME-style name is `image/x-subpix`.
+Subpix validates and canonicalizes documents before saving so ad hoc runtime fields do not leak into the file. The loader accepts normal UTF-8 text files, including files with a UTF-8 BOM, and reports empty files separately from malformed JSON.
 
 ```json
 {
@@ -72,8 +73,7 @@ The app includes three display profile options:
 The canvas is an editable simulated subpixel screen. Each logical slot is shown as an enlarged horizontal RGB/BGR stripe, so the editor always shows the same subpixel structure that a simulated preview would show.
 The editor coordinate origin is shown as a small point at the center of the canvas. The file format still stores the layer as a normal array, so existing `.subpix` files remain compatible.
 Final RGB pixels are still available through **Export PNG**.
-The right panel includes a **Subpixel Signal** readout that shows active logical slot counts and remaps the channel labels when switching between RGB and BGR display profiles.
-It also includes an **Export** readout with PNG size, RGBA byte count, render order, and logical slot-to-channel mapping.
+The right inspector includes compact **Document**, **Display & Export**, and **Signal** readouts. It can be collapsed to a narrow rail when the canvas needs more space.
 
 ## Tools
 
@@ -93,7 +93,7 @@ It also includes an **Export** readout with PNG size, RGBA byte count, render or
 
 The canvas is scrollable, and holding the right mouse button while dragging pans across the workspace.
 Subpix remembers local workspace preferences, including selected tool, display profile, zoom, grid visibility, and pixel-boundary visibility.
-The pattern controls insert deterministic `.subpix` artwork into the active layer, including RGB calibration bars and a grayscale-compatible slot sweep for preview/export checks.
+The Image menu can insert deterministic `.subpix` artwork into the active layer, including RGB calibration bars and a grayscale-compatible slot sweep for preview/export checks.
 
 Useful keyboard binds:
 
@@ -135,6 +135,7 @@ When loading a `.subpix` file, Subpix checks:
 - layer data values are integers from 0 to 255
 
 Invalid files show a useful error in the status bar.
+Saving also runs the same validation path before writing the `.subpix` JSON. In the Electron desktop build, `.subpix` and PNG exports are written through a same-directory temporary file and then renamed into place, reducing the chance of leaving a partially written file if a save fails.
 
 ## Current Limitations
 

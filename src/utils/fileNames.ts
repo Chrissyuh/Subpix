@@ -1,3 +1,5 @@
+import { DEFAULT_DOCUMENT_FILE_NAME, DEFAULT_DOCUMENT_NAME, SUBPIX_EXTENSION } from "@/format/subpixTypes";
+
 export function baseNameFromPath(filePath: string | null): string {
   if (!filePath) {
     return "";
@@ -8,10 +10,17 @@ export function baseNameFromPath(filePath: string | null): string {
   return fileName.replace(/\.[^/.]+$/, "");
 }
 
+function normalizeFileNameCandidate(name: string, fallbackName: string): string {
+  const trimmedName = name.trim();
+  return trimmedName.length > 0 ? trimmedName : fallbackName;
+}
+
 export function ensureSubpixFileName(name: string): string {
-  return name.toLowerCase().endsWith(".subpix") ? name : `${name}.subpix`;
+  const fileName = normalizeFileNameCandidate(name, DEFAULT_DOCUMENT_FILE_NAME);
+  return fileName.toLowerCase().endsWith(SUBPIX_EXTENSION) ? fileName : `${fileName}${SUBPIX_EXTENSION}`;
 }
 
 export function ensurePngFileName(name: string): string {
-  return name.toLowerCase().endsWith(".png") ? name : `${name}.png`;
+  const fileName = normalizeFileNameCandidate(name, DEFAULT_DOCUMENT_NAME);
+  return fileName.toLowerCase().endsWith(".png") ? fileName : `${fileName}.png`;
 }

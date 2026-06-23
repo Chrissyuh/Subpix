@@ -8,11 +8,20 @@ export class SubpixLoadError extends Error {
   }
 }
 
+function normalizeSerializedSubpix(serialized: string): string {
+  return serialized.replace(/^\uFEFF/, "");
+}
+
 export function loadSubpix(serialized: string): SubpixDocument {
   let parsed: unknown;
+  const content = normalizeSerializedSubpix(serialized);
+
+  if (content.trim().length === 0) {
+    throw new SubpixLoadError(["File is empty."]);
+  }
 
   try {
-    parsed = JSON.parse(serialized);
+    parsed = JSON.parse(content);
   } catch (error) {
     throw new SubpixLoadError([`Invalid JSON: ${error instanceof Error ? error.message : String(error)}`]);
   }
@@ -24,4 +33,3 @@ export function loadSubpix(serialized: string): SubpixDocument {
 
   return result.document;
 }
-

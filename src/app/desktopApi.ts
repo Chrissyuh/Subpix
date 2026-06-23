@@ -5,6 +5,7 @@ import type {
   DesktopSavePayload,
   DesktopSaveResult
 } from "@/app/desktopApiTypes";
+import { SUBPIX_EXTENSION, SUBPIX_INTERNAL_MIME } from "@/format/subpixTypes";
 
 function downloadBytes(bytes: number[], fileName: string, mimeType: string): void {
   const blob = new Blob([new Uint8Array(bytes)], { type: mimeType });
@@ -76,7 +77,7 @@ function pickSubpixFile(): Promise<DesktopOpenResult | null> {
     }
 
     input.type = "file";
-    input.accept = ".subpix,image/x-subpix,application/json";
+    input.accept = `${SUBPIX_EXTENSION},${SUBPIX_INTERNAL_MIME},application/json`;
     input.style.display = "none";
     input.addEventListener("change", () => {
       const file = input.files?.[0];
@@ -100,7 +101,7 @@ const browserFallback: DesktopApi = {
   onOpenSubpixFile: () => () => undefined,
   onAppCommand: () => () => undefined,
   saveSubpix: async (payload: DesktopSavePayload): Promise<DesktopSaveResult> => {
-    downloadText(payload.content, payload.suggestedName, "image/x-subpix");
+    downloadText(payload.content, payload.suggestedName, SUBPIX_INTERNAL_MIME);
     return { filePath: payload.suggestedName };
   },
   exportPng: async (payload: DesktopExportPngPayload): Promise<DesktopSaveResult> => {

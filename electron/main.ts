@@ -8,8 +8,8 @@ import {
   type MenuItemConstructorOptions,
   type MessageBoxOptions
 } from "electron";
-import { readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { readFile, rename, rm, writeFile } from "node:fs/promises";
+import { basename, dirname, join } from "node:path";
 import type {
   DesktopAppCommand,
   DesktopExportPngPayload,
@@ -17,6 +17,7 @@ import type {
   DesktopSavePayload,
   DesktopSaveResult
 } from "../src/app/desktopApiTypes";
+import { SUBPIX_EXTENSION } from "../src/format/subpixTypes";
 
 const SUBPIX_FILTER = { name: "Subpixel Image", extensions: ["subpix"] };
 const PNG_FILTER = { name: "PNG Image", extensions: ["png"] };
@@ -58,11 +59,12 @@ function createWindow(): BrowserWindow {
 }
 
 function ensureExtension(filePath: string, extension: string): string {
-  return filePath.toLowerCase().endsWith(`.${extension}`) ? filePath : `${filePath}.${extension}`;
+  const normalizedExtension = extension.startsWith(".") ? extension : `.${extension}`;
+  return filePath.toLowerCase().endsWith(normalizedExtension.toLowerCase()) ? filePath : `${filePath}${normalizedExtension}`;
 }
 
 function isSubpixPath(filePath: string): boolean {
-  return filePath.toLowerCase().endsWith(".subpix");
+  return filePath.toLowerCase().endsWith(SUBPIX_EXTENSION);
 }
 
 function getSubpixPathFromArgs(args: string[]): string | null {
@@ -72,6 +74,18 @@ function getSubpixPathFromArgs(args: string[]): string | null {
 async function readSubpixFile(filePath: string): Promise<DesktopOpenResult> {
   const content = await readFile(filePath, "utf8");
   return { filePath, content };
+}
+
+async function writeFileAtomically(filePath: string, content: string | Buffer): Promise<void> {
+  const tempPath = join(dirname(filePath), `.${basename(filePath)}.${process.pid}.${Date.now()}.tmp`);
+
+  try {
+    await writeFile(tempPath, content);
+    await rename(tempPath, filePath);
+  } catch (error) {
+    await rm(tempPath, { force: true }).catch(() => undefined);
+    throw error;
+  }
 }
 
 async function openSubpixFileFromShell(filePath: string): Promise<void> {
@@ -243,10 +257,10 @@ ipcMain.handle(
         return null;
       }
 
-      targetPath = ensureExtension(result.filePath, "subpix");
+      targetPath = ensureExtension(result.filePath, SUBPIX_EXTENSION);
     }
 
-    await writeFile(targetPath, payload.content, "utf8");
+    await writeFileAtomically(targetPath, payload.content);
     return { filePath: targetPath };
   }
 );
@@ -264,8 +278,9 @@ ipcMain.handle(
       return null;
     }
 
-    await writeFile(ensureExtension(result.filePath, "png"), Buffer.from(payload.bytes));
-    return { filePath: ensureExtension(result.filePath, "png") };
+    const targetPath = ensureExtension(result.filePath, "png");
+    await writeFileAtomically(targetPath, Buffer.from(payload.bytes));
+    return { filePath: targetPath };
   }
 );
 
