@@ -171,13 +171,21 @@ Run tests:
 npm test
 ```
 
-Create a Windows installer:
+Create an unpacked Windows desktop build:
 
 ```sh
 npm run dist:win
 ```
 
-Windows builds register `.subpix` as a **Subpixel Image** file association. When Subpix is launched with a `.subpix` path, the desktop shell opens that file directly, and additional `.subpix` launches are routed into the existing app window.
+The default Windows build writes to `%TEMP%\subpix-release\win-unpacked\Subpix.exe` so OneDrive project-folder locking does not interfere with packaging. Set `SUBPIX_WIN_OUTPUT_DIR` before running the command to choose a different output directory.
+
+Installer packaging is kept separate:
+
+```sh
+npm run dist:win:installer
+```
+
+Installer builds register `.subpix` as a **Subpixel Image** file association. When Subpix is launched with a `.subpix` path, the desktop shell opens that file directly, and additional `.subpix` launches are routed into the existing app window.
 
 ## Exporting PNGs
 

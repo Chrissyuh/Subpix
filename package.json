@@ -2,6 +2,7 @@
   "name": "subpix",
   "version": "0.1.0",
   "description": "Subpix desktop editor and viewer for Subpixel Image files.",
+  "author": "Subpix contributors",
   "productName": "Subpix",
   "type": "module",
   "main": "./out/main/index.js",
@@ -11,7 +12,8 @@
     "build": "tsc --noEmit && electron-vite build",
     "test": "vitest run",
     "preview": "electron-vite preview",
-    "dist:win": "npm run build && electron-builder --win"
+    "dist:win": "npm run build && node scripts/package-win.mjs",
+    "dist:win:installer": "npm run build && electron-builder --win"
   },
   "build": {
     "appId": "dev.subpix.app",
