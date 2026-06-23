@@ -64,10 +64,12 @@ button {
 
 .brand-mark {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, 5px);
+  grid-template-rows: 19px;
+  place-content: center;
   gap: 2px;
-  width: 28px;
-  height: 28px;
+  width: 29px;
+  height: 29px;
   padding: 4px;
   border: 1px solid #ffffff;
   border-radius: 7px;
