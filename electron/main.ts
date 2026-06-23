@@ -117,7 +117,7 @@ function buildApplicationMenu(): void {
         commandMenuItem("Save", "save", "CommandOrControl+S"),
         commandMenuItem("Save As...", "save-as", "CommandOrControl+Shift+S"),
         { type: "separator" },
-        commandMenuItem("Export Packed PNG...", "export-png", "CommandOrControl+Shift+E"),
+        commandMenuItem("Export PNG...", "export-png", "CommandOrControl+Shift+E"),
         { type: "separator" },
         { role: process.platform === "darwin" ? "close" : "quit" }
       ]
@@ -144,10 +144,6 @@ function buildApplicationMenu(): void {
     {
       label: "View",
       submenu: [
-        commandMenuItem("Drawing Grid", "show-grid-view", "CommandOrControl+1"),
-        commandMenuItem("Simulated Preview", "show-simulated-view", "CommandOrControl+2"),
-        commandMenuItem("Packed Preview", "show-packed-view", "CommandOrControl+3"),
-        { type: "separator" },
         commandMenuItem("Zoom In", "zoom-in", "CommandOrControl+="),
         commandMenuItem("Zoom Out", "zoom-out", "CommandOrControl+-"),
         { type: "separator" },
@@ -176,7 +172,7 @@ function buildApplicationMenu(): void {
             const options: MessageBoxOptions = {
               buttons: ["OK"],
               detail:
-                "Subpix edits logical RGB/BGR stripe subpixel artwork, saves readable .subpix files, and exports packed PNG images.",
+                "Subpix edits logical RGB/BGR stripe subpixel artwork, saves readable .subpix files, and exports PNG images.",
               message: "Subpix",
               title: "About Subpix",
               type: "info"
@@ -250,7 +246,7 @@ ipcMain.handle(
   "subpix:export-png",
   async (_event, payload: DesktopExportPngPayload): Promise<DesktopSaveResult | null> => {
     const result = await dialog.showSaveDialog({
-      title: "Export Packed PNG",
+      title: "Export PNG",
       defaultPath: payload.suggestedName,
       filters: [PNG_FILTER, { name: "All Files", extensions: ["*"] }]
     });

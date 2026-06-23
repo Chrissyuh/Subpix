@@ -10,7 +10,6 @@ export const MIN_DOCUMENT_PIXELS = 1;
 export const MAX_DOCUMENT_PIXELS = 512;
 
 export type SubpixOrder = "RGB" | "BGR";
-export type ViewMode = "grid" | "simulated" | "packed";
 export type Tool = "brush" | "eraser";
 export type DisplayProfileId = "rgb-horizontal" | "bgr-horizontal" | "incompatible";
 
@@ -158,11 +157,11 @@ export function getCompatibilityMessage(document: SubpixDocument, profileId: Dis
   const architectureName = `horizontal ${document.architecture.slotsPerPixel[0]}x${document.architecture.slotsPerPixel[1]} stripe`;
 
   if (order === "RGB") {
-    return `This file uses ${architectureName} subpixels. Your selected display profile is RGB horizontal stripe, so packed preview/export is supported.`;
+    return `This file uses ${architectureName} subpixels. Your selected display profile is RGB horizontal stripe, so PNG export is supported.`;
   }
 
   if (order === "BGR") {
-    return `This file uses ${architectureName} subpixels. Your selected display profile is BGR horizontal stripe, so the artwork will be remapped during preview/export.`;
+    return `This file uses ${architectureName} subpixels. Your selected display profile is BGR horizontal stripe, so PNG export remaps the artwork.`;
   }
 
   return `This file requires ${architectureName} subpixels. Your selected display profile is incompatible. Use simulated preview instead.`;

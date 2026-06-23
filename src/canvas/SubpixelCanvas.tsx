@@ -1,16 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
-import { renderPackedPreview } from "@/canvas/renderPackedPreview";
 import { renderSimulatedView } from "@/canvas/renderSimulatedView";
-import { renderSubpixelGrid } from "@/canvas/renderSubpixelGrid";
 import {
-  canUsePackedPreview,
   getHeightSubpixels,
   getWidthSubpixels,
-  type DisplayProfileId,
   type SubpixDocument,
   type SubpixOrder,
-  type Tool,
-  type ViewMode
+  type Tool
 } from "@/format/subpixTypes";
 
 interface CanvasMetrics {
@@ -22,8 +17,6 @@ interface CanvasMetrics {
 
 export interface SubpixelCanvasProps {
   document: SubpixDocument;
-  viewMode: ViewMode;
-  displayProfile: DisplayProfileId;
   order: SubpixOrder;
   tool: Tool;
   zoom: number;
@@ -34,41 +27,19 @@ export interface SubpixelCanvasProps {
   onEndStroke: () => void;
 }
 
-function getCanvasMetrics(document: SubpixDocument, viewMode: ViewMode, zoom: number): CanvasMetrics {
+function getCanvasMetrics(document: SubpixDocument, zoom: number): CanvasMetrics {
   const widthSubpixels = getWidthSubpixels(document);
-  const heightSubpixels = getHeightSubpixels(document);
-
-  if (viewMode === "packed") {
-    const pixelSize = zoom * 3;
-    return {
-      width: document.document.widthPixels * pixelSize,
-      height: document.document.heightPixels * pixelSize,
-      subpixelCellWidth: zoom,
-      subpixelCellHeight: zoom
-    };
-  }
-
-  if (viewMode === "simulated") {
-    return {
-      width: widthSubpixels * zoom,
-      height: document.document.heightPixels * zoom * 3,
-      subpixelCellWidth: zoom,
-      subpixelCellHeight: zoom * 3
-    };
-  }
 
   return {
     width: widthSubpixels * zoom,
-    height: heightSubpixels * zoom,
+    height: getHeightSubpixels(document) * zoom * 3,
     subpixelCellWidth: zoom,
-    subpixelCellHeight: zoom
+    subpixelCellHeight: zoom * 3
   };
 }
 
 export function SubpixelCanvas({
   document,
-  viewMode,
-  displayProfile,
   order,
   tool,
   zoom,
@@ -82,8 +53,7 @@ export function SubpixelCanvas({
   const drawingRef = useRef(false);
   const lastPaintedRef = useRef<string | null>(null);
   const [pointerCell, setPointerCell] = useState<{ x: number; y: number } | null>(null);
-  const metrics = useMemo(() => getCanvasMetrics(document, viewMode, zoom), [document, viewMode, zoom]);
-  const packedAvailable = canUsePackedPreview(document, displayProfile);
+  const metrics = useMemo(() => getCanvasMetrics(document, zoom), [document, zoom]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -105,39 +75,16 @@ export function SubpixelCanvas({
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.imageSmoothingEnabled = false;
 
-    if (viewMode === "packed" && packedAvailable) {
-      renderPackedPreview(ctx, document, {
-        pixelSize: zoom * 3,
-        order,
-        showGrid
-      });
-      return;
-    }
-
-    if (viewMode === "simulated") {
-      renderSimulatedView(ctx, document, {
-        subpixelWidth: zoom,
-        pixelHeight: zoom * 3,
-        order,
-        showGrid,
-        showPixelBoundaries
-      });
-      return;
-    }
-
-    renderSubpixelGrid(ctx, document, {
-      cellSize: zoom,
+    renderSimulatedView(ctx, document, {
+      subpixelWidth: zoom,
+      pixelHeight: zoom * 3,
       order,
       showGrid,
       showPixelBoundaries
     });
-  }, [displayProfile, document, metrics, order, packedAvailable, showGrid, showPixelBoundaries, viewMode, zoom]);
+  }, [document, metrics, order, showGrid, showPixelBoundaries, zoom]);
 
   function getCellFromPointer(event: React.PointerEvent<HTMLCanvasElement>): { x: number; y: number } | null {
-    if (viewMode !== "grid") {
-      return null;
-    }
-
     const rect = event.currentTarget.getBoundingClientRect();
     const x = Math.floor((event.clientX - rect.left) / metrics.subpixelCellWidth);
     const y = Math.floor((event.clientY - rect.top) / metrics.subpixelCellHeight);
@@ -162,7 +109,7 @@ export function SubpixelCanvas({
   }
 
   function handlePointerDown(event: React.PointerEvent<HTMLCanvasElement>): void {
-    if (event.button !== 0 || viewMode !== "grid") {
+    if (event.button !== 0) {
       return;
     }
 
@@ -199,27 +146,19 @@ export function SubpixelCanvas({
     }
   }
 
-  if (viewMode === "packed" && !packedAvailable) {
-    return (
-      <div className="canvas-empty-state" role="status">
-        Packed preview is disabled for the selected display profile.
-      </div>
-    );
-  }
-
   return (
     <div className="canvas-stage">
       <canvas
         ref={canvasRef}
         aria-label="Subpixel artwork canvas"
-        className={`subpixel-canvas subpixel-canvas--${viewMode}`}
+        className="subpixel-canvas subpixel-canvas--simulated"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         onPointerLeave={() => setPointerCell(null)}
       />
-      {viewMode === "grid" && pointerCell ? (
+      {pointerCell ? (
         <div className="cell-readout">
           {pointerCell.x}, {pointerCell.y}
         </div>

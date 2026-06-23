@@ -56,7 +56,7 @@ function getStatusLabel(status: ExportReadinessStatus): string {
 
 function getMessage(status: ExportReadinessStatus): string {
   if (status === "blocked") {
-    return "Packed PNG export is disabled for the selected display profile.";
+    return "PNG export is disabled for the selected display profile.";
   }
 
   if (status === "remapped") {

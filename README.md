@@ -13,7 +13,7 @@ New documents default to 32 x 32 real pixels, and Subpix v1 supports custom docu
 
 ## Why `.subpix` Exists
 
-A PNG only stores the final packed RGB pixels. That is useful for export, but it loses the intent of the artwork: which logical subpixel slots were edited, which display order was assumed, and which subpixel architecture the file requires.
+A PNG only stores the final RGB pixels. That is useful for export, but it loses the intent of the artwork: which logical subpixel slots were edited, which display order was assumed, and which subpixel architecture the file requires.
 
 The `.subpix` format stores the artwork as logical subpixel cells plus architecture metadata. Subpix can then remap the same logical artwork for compatible RGB and BGR horizontal stripe displays, show a simulated preview on any screen, and export a normal PNG when a compatible profile is selected.
 
@@ -59,7 +59,7 @@ Subpix stores logical slot positions, not a baked final PNG. For the supported h
 
 - RGB export maps logical slot 0 to red, slot 1 to green, and slot 2 to blue.
 - BGR export maps logical slot 0 to blue, slot 1 to green, and slot 2 to red.
-- Incompatible display profiles disable packed preview and PNG export, but simulated preview still works.
+- Incompatible display profiles disable PNG export, but the simulated canvas still works.
 
 The app includes three display profile options:
 
@@ -67,15 +67,12 @@ The app includes three display profile options:
 - BGR horizontal stripe
 - Incompatible / simulated only
 
-## Canvas And Previews
+## Canvas
 
-- **Canvas**: the default editable subpixel grid. Each subpixel cell is drawn in its physical channel color.
-- **Simulated preview**: an enlarged fake screen preview that shows the subpixel stripes clearly on any display.
-- **Packed preview**: packs every three logical subpixel cells into one normal RGB pixel. This is the same packing used for PNG export.
-
-The preview buttons switch the canvas into simulated or packed preview. Selecting the active preview again, or selecting a drawing tool, returns to the editable grid.
+The canvas is an editable simulated subpixel screen. Each logical slot is shown as an enlarged horizontal RGB/BGR stripe, so the editor always shows the same subpixel structure that a simulated preview would show.
+Final RGB pixels are still available through **Export PNG**.
 The right panel includes a **Subpixel Signal** readout that shows active logical slot counts and remaps the channel labels when switching between RGB and BGR display profiles.
-It also includes an **Export** readout with packed PNG size, RGBA byte count, render order, and logical slot-to-channel mapping.
+It also includes an **Export** readout with PNG size, RGBA byte count, render order, and logical slot-to-channel mapping.
 
 ## Tools
 
@@ -96,10 +93,10 @@ The pattern controls insert deterministic `.subpix` artwork into the active laye
 
 The Electron build includes native desktop menus for common work:
 
-- **File**: new documents, open, save, save as, and packed PNG export
+- **File**: new documents, open, save, save as, and PNG export
 - **Edit**: undo, redo, brush, eraser, and clear canvas
 - **Tools**: calibration bars and slot-sweep pattern insertion
-- **View**: drawing grid, simulated preview, packed preview, zoom, grid, and pixel boundaries
+- **View**: zoom, grid, and pixel boundaries
 - **Display**: RGB stripe, BGR stripe, and incompatible simulated-only profiles
 
 These menu actions are routed through the same editor commands as the toolbar and keyboard shortcuts.
@@ -122,7 +119,7 @@ Invalid files show a useful error in the status bar.
 
 - True physical subpixel preview only works on compatible horizontal RGB/BGR stripe displays.
 - OLED, PenTile, diamond, and other layouts are not supported for true physical mode.
-- Simulated preview works on any display.
+- The simulated canvas works on any display.
 - Browser/Electron scaling, OS scaling, and display DPI can affect true 1:1 viewing.
 - This first version uses JSON `.subpix` files. A zipped or binary version can be added later.
 

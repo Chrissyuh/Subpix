@@ -12,7 +12,7 @@ export const SUBPIX_PATTERNS: SubpixPatternDefinition[] = [
   {
     id: "calibration-bars",
     label: "Calibration bars",
-    summary: "RGB slot bars with a packed-pixel checker band."
+    summary: "RGB slot bars with an exported-pixel checker band."
   },
   {
     id: "slot-sweep",

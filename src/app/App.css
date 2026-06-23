@@ -117,8 +117,7 @@ button {
 
 .command-button,
 .icon-button,
-.tool-button,
-.segmented-control button {
+.tool-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -159,15 +158,13 @@ button {
 
 .command-button:hover,
 .icon-button:hover,
-.tool-button:hover,
-.segmented-control button:hover {
+.tool-button:hover {
   border-color: #ffffff;
   background: #202020;
 }
 
 .command-button:disabled,
-.icon-button:disabled,
-.segmented-control button:disabled {
+.icon-button:disabled {
   color: #666666;
   border-color: #242424;
   background: #101010;
@@ -175,8 +172,7 @@ button {
 }
 
 .icon-button.is-selected,
-.tool-button.is-selected,
-.segmented-control .is-selected {
+.tool-button.is-selected {
   color: #050505;
   border-color: #ffffff;
   background: #ffffff;
@@ -188,28 +184,6 @@ button {
   color: #d8d8d8;
   text-align: center;
   white-space: nowrap;
-}
-
-.segmented-control {
-  display: flex;
-  min-width: 224px;
-  overflow: hidden;
-  border: 1px solid #343434;
-  border-radius: 7px;
-  background: #141414;
-}
-
-.segmented-control button {
-  min-width: 112px;
-  padding: 0 10px;
-  border: 0;
-  border-right: 1px solid #2c2c2c;
-  border-radius: 0;
-  background: transparent;
-}
-
-.segmented-control button:last-child {
-  border-right: 0;
 }
 
 .document-strip {
@@ -332,7 +306,7 @@ button {
   image-rendering: pixelated;
 }
 
-.subpixel-canvas--grid {
+.subpixel-canvas--simulated {
   cursor: crosshair;
 }
 
@@ -348,16 +322,6 @@ button {
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   pointer-events: none;
-}
-
-.canvas-empty-state {
-  display: grid;
-  place-items: center;
-  min-height: 340px;
-  border: 1px dashed #777777;
-  border-radius: 8px;
-  color: #dedede;
-  background: rgba(255, 255, 255, 0.06);
 }
 
 .right-panel {
@@ -772,11 +736,4 @@ dd {
     padding: 0 8px;
   }
 
-  .segmented-control {
-    min-width: 306px;
-  }
-
-  .segmented-control button {
-    min-width: 102px;
-  }
 }

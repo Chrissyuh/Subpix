@@ -26,10 +26,76 @@ function downloadText(content: string, fileName: string, mimeType: string): void
   URL.revokeObjectURL(href);
 }
 
+function cleanupInput(input: HTMLInputElement): void {
+  input.remove();
+}
+
+async function readPickedSubpixFile(file: File): Promise<DesktopOpenResult> {
+  return {
+    content: await file.text(),
+    filePath: file.name
+  };
+}
+
+function pickSubpixFile(): Promise<DesktopOpenResult | null> {
+  return new Promise((resolve, reject) => {
+    const input = document.createElement("input");
+    let settled = false;
+
+    function cleanup(): void {
+      window.removeEventListener("focus", handleFocus);
+      cleanupInput(input);
+    }
+
+    function settle(result: DesktopOpenResult | null): void {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      cleanup();
+      resolve(result);
+    }
+
+    function fail(error: unknown): void {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      cleanup();
+      reject(error);
+    }
+
+    function handleFocus(): void {
+      window.setTimeout(() => {
+        if (!settled && (!input.files || input.files.length === 0)) {
+          settle(null);
+        }
+      }, 250);
+    }
+
+    input.type = "file";
+    input.accept = ".subpix,image/x-subpix,application/json";
+    input.style.display = "none";
+    input.addEventListener("change", () => {
+      const file = input.files?.[0];
+      if (!file) {
+        settle(null);
+        return;
+      }
+
+      readPickedSubpixFile(file).then(settle).catch(fail);
+    });
+
+    document.body.append(input);
+    window.addEventListener("focus", handleFocus);
+    input.click();
+  });
+}
+
 const browserFallback: DesktopApi = {
-  openSubpix: async (): Promise<DesktopOpenResult | null> => {
-    throw new Error("Opening files is available in the Subpix desktop app.");
-  },
+  openSubpix: pickSubpixFile,
   getLaunchSubpixFile: async (): Promise<DesktopOpenResult | null> => null,
   onOpenSubpixFile: () => () => undefined,
   onAppCommand: () => () => undefined,
@@ -45,8 +111,4 @@ const browserFallback: DesktopApi = {
 
 export function getDesktopApi(): DesktopApi {
   return window.subpixDesktop ?? browserFallback;
-}
-
-export function isDesktopRuntime(): boolean {
-  return Boolean(window.subpixDesktop);
 }

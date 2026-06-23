@@ -20,7 +20,7 @@ import {
   ZoomOut
 } from "lucide-react";
 import { SubpixelCanvas } from "@/canvas/SubpixelCanvas";
-import { getDesktopApi, isDesktopRuntime } from "@/app/desktopApi";
+import { getDesktopApi } from "@/app/desktopApi";
 import type { DesktopAppCommand } from "@/app/desktopApiTypes";
 import { getSubpixDocumentStats } from "@/format/documentStats";
 import { getExportReadiness } from "@/format/exportReadiness";
@@ -54,16 +54,10 @@ import {
   normalizeDocumentName,
   SUBPIX_INTERNAL_MIME,
   type DisplayProfileId,
-  type Tool,
-  type ViewMode
+  type Tool
 } from "@/format/subpixTypes";
 import { useDocumentStore } from "@/state/documentStore";
 import { baseNameFromPath, ensurePngFileName, ensureSubpixFileName } from "@/utils/fileNames";
-
-const PREVIEW_MODES: Array<{ id: Exclude<ViewMode, "grid">; label: string }> = [
-  { id: "simulated", label: "Simulated" },
-  { id: "packed", label: "Packed" }
-];
 
 const TOOL_LABELS: Record<Tool, string> = {
   brush: "Brush",
@@ -112,7 +106,6 @@ export function App(): ReactElement {
   const initialPreferences = useMemo(() => readAppPreferences(), []);
   const isDirtyRef = useRef(state.isDirty);
   const [tool, setTool] = useState<Tool>(initialPreferences.tool);
-  const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [displayProfile, setDisplayProfile] = useState<DisplayProfileId>(initialPreferences.displayProfile);
   const [zoom, setZoom] = useState(initialPreferences.zoom);
   const [showGrid, setShowGrid] = useState(initialPreferences.showGrid);
@@ -132,8 +125,7 @@ export function App(): ReactElement {
   const fileLabel = ensureSubpixFileName(suggestedBaseName);
   const documentStats = useMemo(() => getSubpixDocumentStats(document, renderOrder), [document, renderOrder]);
   const exportReadiness = useMemo(() => getExportReadiness(document, displayProfile), [displayProfile, document]);
-  const activeViewLabel =
-    viewMode === "grid" ? "Drawing grid" : viewMode === "simulated" ? "Simulated preview" : "Packed preview";
+  const activeViewLabel = "Subpixel canvas";
   const windowTitle = `${state.isDirty ? "*" : ""}${ensureSubpixFileName(suggestedBaseName)} - Subpix`;
 
   useEffect(() => {
@@ -170,7 +162,6 @@ export function App(): ReactElement {
       try {
         const nextDocument = loadSubpix(result.content);
         actions.loadDocument(nextDocument, result.filePath);
-        setViewMode("grid");
         setStatusMessage(`Opened ${ensureSubpixFileName(baseNameFromPath(result.filePath))}.`);
       } catch (error) {
         setStatusMessage(`Open failed: ${formatError(error)}`);
@@ -192,13 +183,6 @@ export function App(): ReactElement {
   }, [actions]);
 
   useEffect(() => {
-    if (viewMode === "packed" && !packedAvailable) {
-      setViewMode("simulated");
-      setStatusMessage("Packed preview is disabled for the selected display profile.");
-    }
-  }, [packedAvailable, viewMode]);
-
-  useEffect(() => {
     return getDesktopApi().onAppCommand((command) => {
       handleAppCommand(command);
     });
@@ -215,12 +199,6 @@ export function App(): ReactElement {
           event.preventDefault();
           setIsNewDocumentDialogOpen(false);
           return;
-        }
-
-        if (!editableTarget && viewMode !== "grid") {
-          event.preventDefault();
-          setViewMode("grid");
-          setStatusMessage("Returned to drawing grid.");
         }
       }
 
@@ -271,16 +249,6 @@ export function App(): ReactElement {
       } else if (key === "-") {
         event.preventDefault();
         adjustZoom(zoom - ZOOM_STEP);
-      } else if (key === "1") {
-        event.preventDefault();
-        setViewMode("grid");
-        setStatusMessage("Drawing grid selected.");
-      } else if (key === "2") {
-        event.preventDefault();
-        setPreviewMode("simulated");
-      } else if (key === "3") {
-        event.preventDefault();
-        setPreviewMode("packed");
       }
     }
 
@@ -298,19 +266,7 @@ export function App(): ReactElement {
 
   function selectTool(nextTool: Tool): void {
     setTool(nextTool);
-    setViewMode("grid");
     setStatusMessage(`${TOOL_LABELS[nextTool]} selected.`);
-  }
-
-  function setPreviewMode(nextMode: Exclude<ViewMode, "grid">): void {
-    if (nextMode === "packed" && !packedAvailable) {
-      setStatusMessage("Packed preview is disabled for the selected display profile.");
-      return;
-    }
-
-    const resolvedMode = viewMode === nextMode ? "grid" : nextMode;
-    setViewMode(resolvedMode);
-    setStatusMessage(resolvedMode === "grid" ? "Returned to drawing grid." : `${nextMode === "packed" ? "Packed" : "Simulated"} preview.`);
   }
 
   function toggleGrid(): void {
@@ -363,16 +319,6 @@ export function App(): ReactElement {
       case "select-eraser":
         selectTool("eraser");
         break;
-      case "show-grid-view":
-        setViewMode("grid");
-        setStatusMessage("Drawing grid selected.");
-        break;
-      case "show-simulated-view":
-        setPreviewMode("simulated");
-        break;
-      case "show-packed-view":
-        setPreviewMode("packed");
-        break;
       case "zoom-in":
         adjustZoom(zoom + ZOOM_STEP);
         break;
@@ -408,7 +354,6 @@ export function App(): ReactElement {
     const pattern = getSubpixPattern(patternId);
     actions.insertPattern(pattern.id);
     setSelectedPattern(pattern.id);
-    setViewMode("grid");
     setStatusMessage(`Inserted ${pattern.label}.`);
   }
 
@@ -447,7 +392,6 @@ export function App(): ReactElement {
 
     const name = normalizeDocumentName(newDocumentDraft.name);
     actions.newDocument({ name, widthPixels, heightPixels });
-    setViewMode("grid");
     setIsNewDocumentDialogOpen(false);
     setNewDocumentError(null);
     setStatusMessage(`Created ${ensureSubpixFileName(name)} (${widthPixels}x${heightPixels}px).`);
@@ -466,7 +410,6 @@ export function App(): ReactElement {
 
       const nextDocument = loadSubpix(result.content);
       actions.loadDocument(nextDocument, result.filePath);
-      setViewMode("grid");
       setStatusMessage(`Opened ${ensureSubpixFileName(baseNameFromPath(result.filePath))}.`);
     } catch (error) {
       setStatusMessage(`Open failed: ${formatError(error)}`);
@@ -543,7 +486,7 @@ export function App(): ReactElement {
             <FilePlus2 size={16} />
             New
           </button>
-          <button className="command-button" onClick={() => void handleOpen()} disabled={!isDesktopRuntime()}>
+          <button className="command-button" onClick={() => void handleOpen()}>
             <FolderOpen size={16} />
             Open
           </button>
@@ -559,7 +502,7 @@ export function App(): ReactElement {
             className="command-button"
             onClick={() => void handleExportPng()}
             disabled={!packedAvailable}
-            title={packedAvailable ? "Export packed RGB PNG" : "PNG export requires a compatible display profile"}
+            title={packedAvailable ? "Export RGB PNG" : "PNG export requires a compatible display profile"}
           >
             <Download size={16} />
             Export PNG
@@ -580,20 +523,6 @@ export function App(): ReactElement {
           <button className="icon-button" title="Zoom in (+)" onClick={() => adjustZoom(zoom + ZOOM_STEP)} disabled={zoom >= MAX_ZOOM}>
             <ZoomIn size={17} />
           </button>
-        </div>
-
-        <div className="segmented-control" aria-label="Preview mode">
-          {PREVIEW_MODES.map((mode) => (
-            <button
-              key={mode.id}
-              className={viewMode === mode.id ? "is-selected" : ""}
-              aria-pressed={viewMode === mode.id}
-              onClick={() => setPreviewMode(mode.id)}
-              disabled={mode.id === "packed" && !packedAvailable}
-            >
-              {mode.label}
-            </button>
-          ))}
         </div>
 
         <div className="document-strip" title={fileLabel}>
@@ -659,8 +588,6 @@ export function App(): ReactElement {
       <main className="workspace">
         <SubpixelCanvas
           document={document}
-          viewMode={viewMode}
-          displayProfile={displayProfile}
           order={renderOrder}
           tool={tool}
           zoom={zoom}
