@@ -88,6 +88,7 @@ It also includes an **Export** readout with PNG size, RGBA byte count, render or
 - Zoom in and out, including mouse-wheel zoom centered on the cursor
 - Zoom to drawing, which recenters the viewport around active artwork or the canvas origin
 - Combined grid menu with grid and pixel-boundary toggles
+- Ignore color view setting, off by default, which renders active subpixels as white intensity instead of RGB/BGR channel colors
 - Calibration and slot-sweep pattern insertion
 
 The canvas is scrollable, and holding the right mouse button while dragging pans across the workspace.
@@ -106,6 +107,7 @@ Useful keyboard binds:
 - `I`: filled ellipse
 - `G`: grid
 - `P`: pixel boundaries
+- `C`: ignore color
 - `0`: zoom to drawing
 
 ## Desktop Menus
@@ -115,7 +117,7 @@ The Electron build includes native desktop menus for common work:
 - **File**: new documents, open, save, save as, and PNG export
 - **Edit**: undo, redo, erasers, brush, and clear canvas
 - **Tools**: shape tools, calibration bars, and slot-sweep pattern insertion
-- **View**: zoom, zoom to drawing, grid, and pixel boundaries
+- **View**: zoom, zoom to drawing, grid, pixel boundaries, and ignore color
 - **Display**: RGB stripe, BGR stripe, and incompatible simulated-only profiles
 
 These menu actions are routed through the same editor commands as the toolbar and keyboard shortcuts.

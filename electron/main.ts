@@ -156,7 +156,8 @@ function buildApplicationMenu(): void {
         commandMenuItem("Zoom To Drawing", "zoom-to-drawing", "CommandOrControl+0"),
         { type: "separator" },
         commandMenuItem("Toggle Grid", "toggle-grid", "CommandOrControl+G"),
-        commandMenuItem("Toggle Pixel Boundaries", "toggle-pixel-boundaries", "CommandOrControl+Shift+P")
+        commandMenuItem("Toggle Pixel Boundaries", "toggle-pixel-boundaries", "CommandOrControl+Shift+P"),
+        commandMenuItem("Toggle Ignore Color", "toggle-ignore-color")
       ]
     },
     {

@@ -2,6 +2,7 @@ import { channelIndexForSlot, getCompositeSubpixelIntensities } from "@/format/e
 import { getWidthSubpixels, type SubpixDocument, type SubpixOrder } from "@/format/subpixTypes";
 
 export interface GridOptions {
+  ignoreColor: boolean;
   showGrid: boolean;
   showPixelBoundaries: boolean;
 }
@@ -12,7 +13,11 @@ export function clearCanvas(ctx: CanvasRenderingContext2D, width: number, height
   ctx.fillRect(0, 0, width, height);
 }
 
-export function colorForSlot(slot: number, order: SubpixOrder, intensity: number): string {
+export function colorForSlot(slot: number, order: SubpixOrder, intensity: number, ignoreColor = false): string {
+  if (ignoreColor) {
+    return `rgb(${intensity} ${intensity} ${intensity})`;
+  }
+
   const channels = [0, 0, 0];
   channels[channelIndexForSlot(slot, order)] = intensity;
   return `rgb(${channels[0]} ${channels[1]} ${channels[2]})`;
@@ -102,7 +107,7 @@ export function drawSubpixelCells(
   for (let y = 0; y < heightSubpixels; y += 1) {
     for (let x = 0; x < widthSubpixels; x += 1) {
       const intensity = composite[y * widthSubpixels + x] ?? 0;
-      ctx.fillStyle = colorForSlot(x % 3, order, intensity);
+      ctx.fillStyle = colorForSlot(x % 3, order, intensity, false);
       ctx.fillRect(x * cellWidth, y * cellHeight, cellWidth, cellHeight);
     }
   }

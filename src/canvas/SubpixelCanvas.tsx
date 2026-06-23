@@ -40,6 +40,7 @@ export interface SubpixelCanvasProps {
   order: SubpixOrder;
   tool: Tool;
   zoom: number;
+  ignoreColor: boolean;
   showGrid: boolean;
   showPixelBoundaries: boolean;
   onBeginStroke: () => void;
@@ -221,6 +222,7 @@ export function SubpixelCanvas({
   order,
   tool,
   zoom,
+  ignoreColor,
   showGrid,
   showPixelBoundaries,
   onBeginStroke,
@@ -262,6 +264,7 @@ export function SubpixelCanvas({
       subpixelWidth: zoom,
       pixelHeight: zoom * 3,
       order,
+      ignoreColor,
       showGrid,
       showPixelBoundaries
     });
@@ -269,7 +272,7 @@ export function SubpixelCanvas({
     if (dragState) {
       drawDragPreview(ctx, dragState, metrics);
     }
-  }, [document, dragState, metrics, order, showGrid, showPixelBoundaries, zoom]);
+  }, [document, dragState, ignoreColor, metrics, order, showGrid, showPixelBoundaries, zoom]);
 
   function getCellFromPointer(event: React.PointerEvent<HTMLCanvasElement>): { x: number; y: number } | null {
     const rect = event.currentTarget.getBoundingClientRect();

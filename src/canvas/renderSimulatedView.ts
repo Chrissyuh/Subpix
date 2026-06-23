@@ -24,7 +24,7 @@ export function renderSimulatedView(
   for (let y = 0; y < heightPixels; y += 1) {
     for (let x = 0; x < widthSubpixels; x += 1) {
       const intensity = composite[y * widthSubpixels + x] ?? 0;
-      ctx.fillStyle = colorForSlot(x % 3, options.order, intensity);
+      ctx.fillStyle = colorForSlot(x % 3, options.order, intensity, options.ignoreColor);
       ctx.fillRect(x * options.subpixelWidth, y * options.pixelHeight, options.subpixelWidth, options.pixelHeight);
     }
   }

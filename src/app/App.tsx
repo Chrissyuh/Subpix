@@ -12,6 +12,7 @@ import {
   FolderOpen,
   Grid2X2,
   Minus,
+  Palette,
   Redo2,
   Save,
   SaveAll,
@@ -123,6 +124,7 @@ export function App(): ReactElement {
   const [tool, setTool] = useState<Tool>(initialPreferences.tool);
   const [displayProfile, setDisplayProfile] = useState<DisplayProfileId>(initialPreferences.displayProfile);
   const [zoom, setZoom] = useState(initialPreferences.zoom);
+  const [ignoreColor, setIgnoreColor] = useState(initialPreferences.ignoreColor);
   const [showGrid, setShowGrid] = useState(initialPreferences.showGrid);
   const [showPixelBoundaries, setShowPixelBoundaries] = useState(initialPreferences.showPixelBoundaries);
   const [activeTopMenu, setActiveTopMenu] = useState<TopMenuId | null>(null);
@@ -156,12 +158,13 @@ export function App(): ReactElement {
   useEffect(() => {
     writeAppPreferences({
       displayProfile,
+      ignoreColor,
       showGrid,
       showPixelBoundaries,
       tool,
       zoom
     });
-  }, [displayProfile, showGrid, showPixelBoundaries, tool, zoom]);
+  }, [displayProfile, ignoreColor, showGrid, showPixelBoundaries, tool, zoom]);
 
   useEffect(() => {
     let disposed = false;
@@ -278,6 +281,9 @@ export function App(): ReactElement {
       } else if (key === "p") {
         event.preventDefault();
         togglePixelBoundaries();
+      } else if (key === "c") {
+        event.preventDefault();
+        toggleIgnoreColor();
       } else if (key === "=" || key === "+") {
         event.preventDefault();
         adjustZoom(zoom + ZOOM_STEP);
@@ -318,6 +324,12 @@ export function App(): ReactElement {
     const nextValue = !showPixelBoundaries;
     setShowPixelBoundaries(nextValue);
     setStatusMessage(`Pixel boundaries ${nextValue ? "shown" : "hidden"}.`);
+  }
+
+  function toggleIgnoreColor(): void {
+    const nextValue = !ignoreColor;
+    setIgnoreColor(nextValue);
+    setStatusMessage(`Color ${nextValue ? "ignored" : "shown"}.`);
   }
 
   function chooseDisplayProfile(nextProfile: DisplayProfileId): void {
@@ -452,6 +464,9 @@ export function App(): ReactElement {
         break;
       case "toggle-pixel-boundaries":
         togglePixelBoundaries();
+        break;
+      case "toggle-ignore-color":
+        toggleIgnoreColor();
         break;
       case "display-rgb":
         chooseDisplayProfile("rgb-horizontal");
@@ -727,6 +742,10 @@ export function App(): ReactElement {
                   {showPixelBoundaries ? <EyeOff size={15} /> : <Eye size={15} />}
                   {showPixelBoundaries ? "Hide Pixel Boundaries" : "Show Pixel Boundaries"}
                 </button>
+                <button onClick={toggleIgnoreColor}>
+                  <Palette size={15} />
+                  {ignoreColor ? "Show Color" : "Ignore Color"}
+                </button>
               </div>
             ) : null}
           </div>
@@ -939,6 +958,7 @@ export function App(): ReactElement {
           order={renderOrder}
           tool={tool}
           zoom={zoom}
+          ignoreColor={ignoreColor}
           showGrid={showGrid}
           showPixelBoundaries={showPixelBoundaries}
           onBeginStroke={actions.beginStroke}
@@ -1120,6 +1140,10 @@ export function App(): ReactElement {
             <div>
               <dt>Boundaries</dt>
               <dd>{showPixelBoundaries ? "Shown" : "Hidden"}</dd>
+            </div>
+            <div>
+              <dt>Color</dt>
+              <dd>{ignoreColor ? "Ignored" : "Shown"}</dd>
             </div>
           </dl>
         </section>

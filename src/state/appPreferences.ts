@@ -12,6 +12,7 @@ export const ZOOM_STEP = 2;
 
 export interface AppPreferences {
   displayProfile: DisplayProfileId;
+  ignoreColor: boolean;
   showGrid: boolean;
   showPixelBoundaries: boolean;
   tool: Tool;
@@ -20,6 +21,7 @@ export interface AppPreferences {
 
 export const DEFAULT_APP_PREFERENCES: AppPreferences = {
   displayProfile: "rgb-horizontal",
+  ignoreColor: false,
   showGrid: true,
   showPixelBoundaries: true,
   tool: "brush",
@@ -60,6 +62,7 @@ export function sanitizeAppPreferences(value: unknown): AppPreferences {
     displayProfile: isDisplayProfileId(value.displayProfile)
       ? value.displayProfile
       : DEFAULT_APP_PREFERENCES.displayProfile,
+    ignoreColor: typeof value.ignoreColor === "boolean" ? value.ignoreColor : DEFAULT_APP_PREFERENCES.ignoreColor,
     showGrid: typeof value.showGrid === "boolean" ? value.showGrid : DEFAULT_APP_PREFERENCES.showGrid,
     showPixelBoundaries:
       typeof value.showPixelBoundaries === "boolean"

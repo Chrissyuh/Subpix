@@ -43,6 +43,7 @@ export type DesktopAppCommand =
   | "zoom-to-drawing"
   | "toggle-grid"
   | "toggle-pixel-boundaries"
+  | "toggle-ignore-color"
   | "display-rgb"
   | "display-bgr"
   | "display-incompatible";
