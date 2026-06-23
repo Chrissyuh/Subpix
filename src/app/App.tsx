@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement
 import {
   Brush,
   Check,
+  ChevronDown,
+  Circle,
   Download,
   Eraser,
   Eye,
@@ -9,9 +11,11 @@ import {
   FilePlus2,
   FolderOpen,
   Grid2X2,
+  Minus,
   Redo2,
   Save,
   SaveAll,
+  Square,
   Sparkles,
   Trash2,
   Undo2,
@@ -24,7 +28,7 @@ import { getDesktopApi } from "@/app/desktopApi";
 import type { DesktopAppCommand } from "@/app/desktopApiTypes";
 import { getSubpixDocumentStats } from "@/format/documentStats";
 import { getExportReadiness } from "@/format/exportReadiness";
-import { createPackedPngBytes } from "@/format/exportPng";
+import { createPackedPngBytes, getCompositeSubpixelIntensities } from "@/format/exportPng";
 import { loadSubpix, SubpixLoadError } from "@/format/loadSubpix";
 import { getSubpixPattern, SUBPIX_PATTERNS, type SubpixPatternId } from "@/format/patterns";
 import { saveSubpix } from "@/format/saveSubpix";
@@ -61,8 +65,16 @@ import { baseNameFromPath, ensurePngFileName, ensureSubpixFileName } from "@/uti
 
 const TOOL_LABELS: Record<Tool, string> = {
   brush: "Brush",
-  eraser: "Eraser"
+  eraser: "Cell Eraser",
+  "box-eraser": "Box Eraser",
+  line: "Line",
+  "rect-outline": "Rectangle",
+  "rect-fill": "Filled Rectangle",
+  "ellipse-outline": "Ellipse",
+  "ellipse-fill": "Filled Ellipse"
 };
+
+type TopMenuId = "file" | "edit" | "view" | "tools" | "display";
 
 interface NewDocumentDraft {
   name: string;
@@ -105,11 +117,14 @@ export function App(): ReactElement {
   const { state, actions } = useDocumentStore();
   const initialPreferences = useMemo(() => readAppPreferences(), []);
   const isDirtyRef = useRef(state.isDirty);
+  const workspaceRef = useRef<HTMLElement | null>(null);
   const [tool, setTool] = useState<Tool>(initialPreferences.tool);
   const [displayProfile, setDisplayProfile] = useState<DisplayProfileId>(initialPreferences.displayProfile);
   const [zoom, setZoom] = useState(initialPreferences.zoom);
   const [showGrid, setShowGrid] = useState(initialPreferences.showGrid);
   const [showPixelBoundaries, setShowPixelBoundaries] = useState(initialPreferences.showPixelBoundaries);
+  const [activeTopMenu, setActiveTopMenu] = useState<TopMenuId | null>(null);
+  const [isGridMenuOpen, setIsGridMenuOpen] = useState(false);
   const [statusMessage, setStatusMessage] = useState("Ready.");
   const [isNewDocumentDialogOpen, setIsNewDocumentDialogOpen] = useState(false);
   const [newDocumentDraft, setNewDocumentDraft] = useState<NewDocumentDraft>(DEFAULT_NEW_DOCUMENT_DRAFT);
@@ -237,6 +252,24 @@ export function App(): ReactElement {
       } else if (key === "e") {
         event.preventDefault();
         selectTool("eraser");
+      } else if (key === "x") {
+        event.preventDefault();
+        selectTool("box-eraser");
+      } else if (key === "l") {
+        event.preventDefault();
+        selectTool("line");
+      } else if (key === "r") {
+        event.preventDefault();
+        selectTool("rect-outline");
+      } else if (key === "f") {
+        event.preventDefault();
+        selectTool("rect-fill");
+      } else if (key === "o") {
+        event.preventDefault();
+        selectTool("ellipse-outline");
+      } else if (key === "i") {
+        event.preventDefault();
+        selectTool("ellipse-fill");
       } else if (key === "g") {
         event.preventDefault();
         toggleGrid();
@@ -249,6 +282,9 @@ export function App(): ReactElement {
       } else if (key === "-") {
         event.preventDefault();
         adjustZoom(zoom - ZOOM_STEP);
+      } else if (key === "0") {
+        event.preventDefault();
+        zoomToDrawing();
       }
     }
 
@@ -266,6 +302,7 @@ export function App(): ReactElement {
 
   function selectTool(nextTool: Tool): void {
     setTool(nextTool);
+    setActiveTopMenu(null);
     setStatusMessage(`${TOOL_LABELS[nextTool]} selected.`);
   }
 
@@ -279,6 +316,68 @@ export function App(): ReactElement {
     const nextValue = !showPixelBoundaries;
     setShowPixelBoundaries(nextValue);
     setStatusMessage(`Pixel boundaries ${nextValue ? "shown" : "hidden"}.`);
+  }
+
+  function chooseDisplayProfile(nextProfile: DisplayProfileId): void {
+    setDisplayProfile(nextProfile);
+    setActiveTopMenu(null);
+    setStatusMessage(`${getDisplayProfileLabel(nextProfile)} display selected.`);
+  }
+
+  function getActiveSubpixelBounds(): { maxX: number; maxY: number; minX: number; minY: number } | null {
+    const composite = getCompositeSubpixelIntensities(document);
+    const widthSubpixels = getWidthSubpixels(document);
+    let minX = Number.POSITIVE_INFINITY;
+    let minY = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY;
+    let maxY = Number.NEGATIVE_INFINITY;
+
+    for (let index = 0; index < composite.length; index += 1) {
+      if ((composite[index] ?? 0) === 0) {
+        continue;
+      }
+
+      const x = index % widthSubpixels;
+      const y = Math.floor(index / widthSubpixels);
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+    }
+
+    return Number.isFinite(minX) ? { maxX, maxY, minX, minY } : null;
+  }
+
+  function scrollWorkspaceToBounds(bounds: { maxX: number; maxY: number; minX: number; minY: number }, nextZoom: number): void {
+    window.requestAnimationFrame(() => {
+      const workspace = workspaceRef.current;
+      if (!workspace) {
+        return;
+      }
+
+      const centerX = ((bounds.minX + bounds.maxX + 1) / 2) * nextZoom;
+      const centerY = ((bounds.minY + bounds.maxY + 1) / 2) * nextZoom * 3;
+      workspace.scrollLeft = Math.max(0, 24 + centerX - workspace.clientWidth / 2);
+      workspace.scrollTop = Math.max(0, 24 + centerY - workspace.clientHeight / 2);
+    });
+  }
+
+  function zoomToDrawing(): void {
+    const workspace = workspaceRef.current;
+    const activeBounds = getActiveSubpixelBounds();
+    const originX = Math.floor(getWidthSubpixels(document) / 2);
+    const originY = Math.floor(getHeightSubpixels(document) / 2);
+    const bounds = activeBounds ?? { maxX: originX, maxY: originY, minX: originX, minY: originY };
+    const widthCells = Math.max(12, bounds.maxX - bounds.minX + 1);
+    const heightCells = Math.max(8, bounds.maxY - bounds.minY + 1);
+    const availableWidth = Math.max(120, (workspace?.clientWidth ?? 720) - 96);
+    const availableHeight = Math.max(120, (workspace?.clientHeight ?? 480) - 96);
+    const nextZoom = clampZoom(Math.floor(Math.min(availableWidth / widthCells, availableHeight / (heightCells * 3))));
+
+    setZoom(nextZoom);
+    scrollWorkspaceToBounds(bounds, nextZoom);
+    setActiveTopMenu(null);
+    setStatusMessage(activeBounds ? "Zoomed to active drawing." : "Centered on the canvas origin.");
   }
 
   function handleAppCommand(command: DesktopAppCommand): void {
@@ -319,11 +418,32 @@ export function App(): ReactElement {
       case "select-eraser":
         selectTool("eraser");
         break;
+      case "select-box-eraser":
+        selectTool("box-eraser");
+        break;
+      case "select-line":
+        selectTool("line");
+        break;
+      case "select-rect-outline":
+        selectTool("rect-outline");
+        break;
+      case "select-rect-fill":
+        selectTool("rect-fill");
+        break;
+      case "select-ellipse-outline":
+        selectTool("ellipse-outline");
+        break;
+      case "select-ellipse-fill":
+        selectTool("ellipse-fill");
+        break;
       case "zoom-in":
         adjustZoom(zoom + ZOOM_STEP);
         break;
       case "zoom-out":
         adjustZoom(zoom - ZOOM_STEP);
+        break;
+      case "zoom-to-drawing":
+        zoomToDrawing();
         break;
       case "toggle-grid":
         toggleGrid();
@@ -332,16 +452,13 @@ export function App(): ReactElement {
         togglePixelBoundaries();
         break;
       case "display-rgb":
-        setDisplayProfile("rgb-horizontal");
-        setStatusMessage("RGB horizontal stripe display selected.");
+        chooseDisplayProfile("rgb-horizontal");
         break;
       case "display-bgr":
-        setDisplayProfile("bgr-horizontal");
-        setStatusMessage("BGR horizontal stripe display selected.");
+        chooseDisplayProfile("bgr-horizontal");
         break;
       case "display-incompatible":
-        setDisplayProfile("incompatible");
-        setStatusMessage("Incompatible display profile selected. Use simulated preview.");
+        chooseDisplayProfile("incompatible");
         break;
     }
   }
@@ -466,6 +583,14 @@ export function App(): ReactElement {
     setStatusMessage(`Zoom set to ${clampedZoom}px.`);
   }
 
+  function adjustZoomByWheel(direction: 1 | -1): void {
+    const nextZoom = clampZoom(zoom + direction * ZOOM_STEP);
+    if (nextZoom !== zoom) {
+      setZoom(nextZoom);
+      setStatusMessage(`Zoom set to ${nextZoom}px.`);
+    }
+  }
+
   return (
     <div className="app-shell">
       <header className="top-bar">
@@ -481,32 +606,171 @@ export function App(): ReactElement {
           </div>
         </div>
 
-        <div className="top-bar__group">
-          <button className="command-button" onClick={handleNew}>
-            <FilePlus2 size={16} />
-            New
-          </button>
-          <button className="command-button" onClick={() => void handleOpen()}>
-            <FolderOpen size={16} />
-            Open
-          </button>
-          <button className="command-button" onClick={() => void handleSave(false)}>
-            <Save size={16} />
-            Save
-          </button>
-          <button className="command-button" onClick={() => void handleSave(true)}>
-            <SaveAll size={16} />
-            Save As
-          </button>
-          <button
-            className="command-button"
-            onClick={() => void handleExportPng()}
-            disabled={!packedAvailable}
-            title={packedAvailable ? "Export RGB PNG" : "PNG export requires a compatible display profile"}
-          >
-            <Download size={16} />
-            Export PNG
-          </button>
+        <div className="menu-bar" aria-label="Application menus">
+          <div className="menu-root">
+            <button
+              className="menu-button"
+              aria-expanded={activeTopMenu === "file"}
+              onClick={() => setActiveTopMenu(activeTopMenu === "file" ? null : "file")}
+            >
+              File
+              <ChevronDown size={14} />
+            </button>
+            {activeTopMenu === "file" ? (
+              <div className="menu-popover">
+                <button onClick={handleNew}>
+                  <FilePlus2 size={15} />
+                  New
+                </button>
+                <button onClick={() => void handleOpen()}>
+                  <FolderOpen size={15} />
+                  Open
+                </button>
+                <button onClick={() => void handleSave(false)}>
+                  <Save size={15} />
+                  Save
+                </button>
+                <button onClick={() => void handleSave(true)}>
+                  <SaveAll size={15} />
+                  Save As
+                </button>
+                <button onClick={() => void handleExportPng()} disabled={!packedAvailable}>
+                  <Download size={15} />
+                  Export PNG
+                </button>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="menu-root">
+            <button
+              className="menu-button"
+              aria-expanded={activeTopMenu === "edit"}
+              onClick={() => setActiveTopMenu(activeTopMenu === "edit" ? null : "edit")}
+            >
+              Edit
+              <ChevronDown size={14} />
+            </button>
+            {activeTopMenu === "edit" ? (
+              <div className="menu-popover">
+                <button onClick={actions.undo} disabled={state.past.length === 0}>
+                  <Undo2 size={15} />
+                  Undo
+                </button>
+                <button onClick={actions.redo} disabled={state.future.length === 0}>
+                  <Redo2 size={15} />
+                  Redo
+                </button>
+                <button onClick={actions.clearCanvas}>
+                  <Trash2 size={15} />
+                  Clear Canvas
+                </button>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="menu-root">
+            <button
+              className="menu-button"
+              aria-expanded={activeTopMenu === "view"}
+              onClick={() => setActiveTopMenu(activeTopMenu === "view" ? null : "view")}
+            >
+              View
+              <ChevronDown size={14} />
+            </button>
+            {activeTopMenu === "view" ? (
+              <div className="menu-popover">
+                <button onClick={() => adjustZoom(zoom - ZOOM_STEP)} disabled={zoom <= MIN_ZOOM}>
+                  <ZoomOut size={15} />
+                  Zoom Out
+                </button>
+                <button onClick={() => adjustZoom(zoom + ZOOM_STEP)} disabled={zoom >= MAX_ZOOM}>
+                  <ZoomIn size={15} />
+                  Zoom In
+                </button>
+                <button onClick={zoomToDrawing}>
+                  <ZoomIn size={15} />
+                  Zoom To Drawing
+                </button>
+                <button onClick={toggleGrid}>
+                  <Grid2X2 size={15} />
+                  {showGrid ? "Hide Grid" : "Show Grid"}
+                </button>
+                <button onClick={togglePixelBoundaries}>
+                  {showPixelBoundaries ? <EyeOff size={15} /> : <Eye size={15} />}
+                  {showPixelBoundaries ? "Hide Pixel Boundaries" : "Show Pixel Boundaries"}
+                </button>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="menu-root">
+            <button
+              className="menu-button"
+              aria-expanded={activeTopMenu === "tools"}
+              onClick={() => setActiveTopMenu(activeTopMenu === "tools" ? null : "tools")}
+            >
+              Tools
+              <ChevronDown size={14} />
+            </button>
+            {activeTopMenu === "tools" ? (
+              <div className="menu-popover">
+                <button onClick={() => selectTool("brush")}>
+                  <Brush size={15} />
+                  Brush
+                </button>
+                <button onClick={() => selectTool("eraser")}>
+                  <Eraser size={15} />
+                  Cell Eraser
+                </button>
+                <button onClick={() => selectTool("box-eraser")}>
+                  <Square size={15} />
+                  Box Eraser
+                </button>
+                <button onClick={() => selectTool("line")}>
+                  <Minus size={15} />
+                  Line
+                </button>
+                <button onClick={() => selectTool("rect-outline")}>
+                  <Square size={15} />
+                  Rectangle
+                </button>
+                <button onClick={() => selectTool("rect-fill")}>
+                  <Square size={15} fill="currentColor" />
+                  Filled Rectangle
+                </button>
+                <button onClick={() => selectTool("ellipse-outline")}>
+                  <Circle size={15} />
+                  Ellipse
+                </button>
+                <button onClick={() => selectTool("ellipse-fill")}>
+                  <Circle size={15} fill="currentColor" />
+                  Filled Ellipse
+                </button>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="menu-root">
+            <button
+              className="menu-button"
+              aria-expanded={activeTopMenu === "display"}
+              onClick={() => setActiveTopMenu(activeTopMenu === "display" ? null : "display")}
+            >
+              Display
+              <ChevronDown size={14} />
+            </button>
+            {activeTopMenu === "display" ? (
+              <div className="menu-popover">
+                {DISPLAY_PROFILES.map((profile) => (
+                  <button key={profile.id} onClick={() => chooseDisplayProfile(profile.id)}>
+                    <span className={displayProfile === profile.id ? "menu-check is-on" : "menu-check"} />
+                    {profile.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
         </div>
 
         <div className="top-bar__group">
@@ -523,6 +787,9 @@ export function App(): ReactElement {
           <button className="icon-button" title="Zoom in (+)" onClick={() => adjustZoom(zoom + ZOOM_STEP)} disabled={zoom >= MAX_ZOOM}>
             <ZoomIn size={17} />
           </button>
+          <button className="icon-button" title="Zoom to drawing (0)" onClick={zoomToDrawing}>
+            <ZoomIn size={17} />
+          </button>
         </div>
 
         <div className="document-strip" title={fileLabel}>
@@ -534,16 +801,7 @@ export function App(): ReactElement {
           </span>
         </div>
 
-        <label className="select-field">
-          <span>Display</span>
-          <select value={displayProfile} onChange={(event) => setDisplayProfile(event.target.value as DisplayProfileId)}>
-            {DISPLAY_PROFILES.map((profile) => (
-              <option key={profile.id} value={profile.id}>
-                {profile.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="display-chip">{getDisplayProfileLabel(displayProfile)}</div>
       </header>
 
       <aside className="left-toolbar" aria-label="Tools">
@@ -557,35 +815,98 @@ export function App(): ReactElement {
         </button>
         <button
           className={tool === "eraser" ? "tool-button is-selected" : "tool-button"}
-          title="Eraser (E)"
+          title="Cell eraser (E)"
           aria-pressed={tool === "eraser"}
           onClick={() => selectTool("eraser")}
         >
           <Eraser size={20} />
         </button>
+        <button
+          className={tool === "box-eraser" ? "tool-button is-selected" : "tool-button"}
+          title="Box eraser (X)"
+          aria-pressed={tool === "box-eraser"}
+          onClick={() => selectTool("box-eraser")}
+        >
+          <Square size={20} />
+        </button>
+        <div className="toolbar-divider" />
+        <button
+          className={tool === "line" ? "tool-button is-selected" : "tool-button"}
+          title="Line (L), hold Shift for 90 degrees"
+          aria-pressed={tool === "line"}
+          onClick={() => selectTool("line")}
+        >
+          <Minus size={20} />
+        </button>
+        <button
+          className={tool === "rect-outline" ? "tool-button is-selected" : "tool-button"}
+          title="Rectangle outline (R)"
+          aria-pressed={tool === "rect-outline"}
+          onClick={() => selectTool("rect-outline")}
+        >
+          <Square size={20} />
+        </button>
+        <button
+          className={tool === "rect-fill" ? "tool-button is-selected" : "tool-button"}
+          title="Filled rectangle (F)"
+          aria-pressed={tool === "rect-fill"}
+          onClick={() => selectTool("rect-fill")}
+        >
+          <Square size={20} fill="currentColor" />
+        </button>
+        <button
+          className={tool === "ellipse-outline" ? "tool-button is-selected" : "tool-button"}
+          title="Ellipse outline (O)"
+          aria-pressed={tool === "ellipse-outline"}
+          onClick={() => selectTool("ellipse-outline")}
+        >
+          <Circle size={20} />
+        </button>
+        <button
+          className={tool === "ellipse-fill" ? "tool-button is-selected" : "tool-button"}
+          title="Filled ellipse (I)"
+          aria-pressed={tool === "ellipse-fill"}
+          onClick={() => selectTool("ellipse-fill")}
+        >
+          <Circle size={20} fill="currentColor" />
+        </button>
         <button className="tool-button" title="Clear canvas" onClick={actions.clearCanvas}>
           <Trash2 size={20} />
         </button>
         <div className="toolbar-divider" />
-        <button
-          className={showGrid ? "tool-button is-selected" : "tool-button"}
-          title="Toggle grid (G)"
-          aria-pressed={showGrid}
-          onClick={toggleGrid}
-        >
-          <Grid2X2 size={20} />
-        </button>
-        <button
-          className={showPixelBoundaries ? "tool-button is-selected" : "tool-button"}
-          title="Toggle pixel boundaries (P)"
-          aria-pressed={showPixelBoundaries}
-          onClick={togglePixelBoundaries}
-        >
-          {showPixelBoundaries ? <Eye size={20} /> : <EyeOff size={20} />}
-        </button>
+        <div className="grid-menu-root">
+          <button
+            className={showGrid || showPixelBoundaries ? "tool-button is-selected" : "tool-button"}
+            title="Grid options"
+            aria-expanded={isGridMenuOpen}
+            onClick={() => setIsGridMenuOpen(!isGridMenuOpen)}
+          >
+            <Grid2X2 size={20} />
+          </button>
+          {isGridMenuOpen ? (
+            <div className="grid-popover">
+              <button
+                className={showGrid ? "tool-button is-selected" : "tool-button"}
+                title="Toggle grid (G)"
+                aria-pressed={showGrid}
+                onClick={toggleGrid}
+              >
+                <Grid2X2 size={18} />
+              </button>
+              <button
+                className={showPixelBoundaries ? "tool-button is-selected" : "tool-button"}
+                title="Toggle pixel boundaries (P)"
+                aria-pressed={showPixelBoundaries}
+                onClick={togglePixelBoundaries}
+              >
+                {showPixelBoundaries ? <Eye size={18} /> : <EyeOff size={18} />}
+              </button>
+            </div>
+          ) : null}
+        </div>
       </aside>
 
-      <main className="workspace">
+      <main className="workspace" ref={workspaceRef}>
         <SubpixelCanvas
           document={document}
           order={renderOrder}
@@ -595,7 +916,9 @@ export function App(): ReactElement {
           showPixelBoundaries={showPixelBoundaries}
           onBeginStroke={actions.beginStroke}
           onPaintCell={actions.paintCell}
+          onPaintCells={actions.paintCells}
           onEndStroke={actions.endStroke}
+          onWheelZoom={adjustZoomByWheel}
         />
       </main>
 

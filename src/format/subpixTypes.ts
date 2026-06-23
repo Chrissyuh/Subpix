@@ -4,13 +4,21 @@ export const SUBPIX_EXTENSION = ".subpix";
 export const SUBPIX_INTERNAL_MIME = "image/x-subpix";
 export const DEFAULT_DOCUMENT_FILE_NAME = "Untitled.subpix";
 export const DEFAULT_DOCUMENT_NAME = "Untitled";
-export const DEFAULT_WIDTH_PIXELS = 32;
-export const DEFAULT_HEIGHT_PIXELS = 32;
+export const DEFAULT_WIDTH_PIXELS = 128;
+export const DEFAULT_HEIGHT_PIXELS = 128;
 export const MIN_DOCUMENT_PIXELS = 1;
 export const MAX_DOCUMENT_PIXELS = 512;
 
 export type SubpixOrder = "RGB" | "BGR";
-export type Tool = "brush" | "eraser";
+export type Tool =
+  | "brush"
+  | "eraser"
+  | "box-eraser"
+  | "line"
+  | "rect-outline"
+  | "rect-fill"
+  | "ellipse-outline"
+  | "ellipse-fill";
 export type DisplayProfileId = "rgb-horizontal" | "bgr-horizontal" | "incompatible";
 
 export interface SubpixArchitecture {

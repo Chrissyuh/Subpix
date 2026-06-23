@@ -25,6 +25,7 @@ interface DocumentStoreActions {
   setSavedPath: (filePath: string) => void;
   beginStroke: () => void;
   paintCell: (x: number, y: number, intensity: number) => void;
+  paintCells: (cells: Array<{ x: number; y: number }>, intensity: number) => void;
   endStroke: () => void;
   insertPattern: (patternId: SubpixPatternId) => void;
   clearCanvas: () => void;
@@ -43,6 +44,7 @@ type Action =
   | { type: "saved"; filePath: string }
   | { type: "begin-stroke" }
   | { type: "paint-cell"; x: number; y: number; intensity: number }
+  | { type: "paint-cells"; cells: Array<{ x: number; y: number }>; intensity: number }
   | { type: "end-stroke" }
   | { type: "insert-pattern"; patternId: SubpixPatternId }
   | { type: "clear" }
@@ -110,6 +112,40 @@ function replaceCell(document: SubpixDocument, x: number, y: number, intensity: 
   return nextDocument;
 }
 
+function replaceCells(document: SubpixDocument, cells: Array<{ x: number; y: number }>, intensity: number): SubpixDocument {
+  const widthSubpixels = getWidthSubpixels(document);
+  const layer = document.layers[0];
+  if (!layer || cells.length === 0) {
+    return document;
+  }
+
+  const seen = new Set<number>();
+  let hasChanges = false;
+
+  for (const cell of cells) {
+    const index = cell.y * widthSubpixels + cell.x;
+    if (seen.has(index)) {
+      continue;
+    }
+
+    seen.add(index);
+    if (layer.data[index] !== intensity) {
+      hasChanges = true;
+    }
+  }
+
+  if (!hasChanges) {
+    return document;
+  }
+
+  const nextDocument = cloneSubpixDocument(document);
+  for (const index of seen) {
+    nextDocument.layers[0].data[index] = intensity;
+  }
+
+  return nextDocument;
+}
+
 function clearDocument(document: SubpixDocument): SubpixDocument {
   const nextDocument = cloneSubpixDocument(document);
   nextDocument.layers = nextDocument.layers.map((layer) => ({
@@ -165,6 +201,17 @@ function reducer(state: DocumentStoreState, action: Action): DocumentStoreState 
 
     case "paint-cell": {
       const nextDocument = replaceCell(state.currentDocument, action.x, action.y, action.intensity);
+      return nextDocument === state.currentDocument
+        ? state
+        : {
+            ...state,
+            currentDocument: nextDocument,
+            isDirty: !documentsEqual(nextDocument, state.savedDocument)
+          };
+    }
+
+    case "paint-cells": {
+      const nextDocument = replaceCells(state.currentDocument, action.cells, action.intensity);
       return nextDocument === state.currentDocument
         ? state
         : {
@@ -275,6 +322,7 @@ export function DocumentStoreProvider({ children }: { children: ReactNode }): Re
         setSavedPath: (filePath) => dispatch({ type: "saved", filePath }),
         beginStroke: () => dispatch({ type: "begin-stroke" }),
         paintCell: (x, y, intensity) => dispatch({ type: "paint-cell", x, y, intensity }),
+        paintCells: (cells, intensity) => dispatch({ type: "paint-cells", cells, intensity }),
         endStroke: () => dispatch({ type: "end-stroke" }),
         insertPattern: (patternId) => dispatch({ type: "insert-pattern", patternId }),
         clearCanvas: () => dispatch({ type: "clear" }),

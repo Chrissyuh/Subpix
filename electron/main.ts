@@ -130,6 +130,7 @@ function buildApplicationMenu(): void {
         { type: "separator" },
         commandMenuItem("Brush", "select-brush"),
         commandMenuItem("Eraser", "select-eraser"),
+        commandMenuItem("Box Eraser", "select-box-eraser"),
         { type: "separator" },
         commandMenuItem("Clear Canvas", "clear", "CommandOrControl+Backspace")
       ]
@@ -137,6 +138,12 @@ function buildApplicationMenu(): void {
     {
       label: "Tools",
       submenu: [
+        commandMenuItem("Line", "select-line"),
+        commandMenuItem("Rectangle Outline", "select-rect-outline"),
+        commandMenuItem("Filled Rectangle", "select-rect-fill"),
+        commandMenuItem("Ellipse Outline", "select-ellipse-outline"),
+        commandMenuItem("Filled Ellipse", "select-ellipse-fill"),
+        { type: "separator" },
         commandMenuItem("Insert Calibration Bars", "insert-calibration-bars"),
         commandMenuItem("Insert Slot Sweep", "insert-slot-sweep")
       ]
@@ -146,6 +153,7 @@ function buildApplicationMenu(): void {
       submenu: [
         commandMenuItem("Zoom In", "zoom-in", "CommandOrControl+="),
         commandMenuItem("Zoom Out", "zoom-out", "CommandOrControl+-"),
+        commandMenuItem("Zoom To Drawing", "zoom-to-drawing", "CommandOrControl+0"),
         { type: "separator" },
         commandMenuItem("Toggle Grid", "toggle-grid", "CommandOrControl+G"),
         commandMenuItem("Toggle Pixel Boundaries", "toggle-pixel-boundaries", "CommandOrControl+Shift+P")

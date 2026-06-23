@@ -31,7 +31,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isTool(value: unknown): value is Tool {
-  return value === "brush" || value === "eraser";
+  return (
+    value === "brush" ||
+    value === "eraser" ||
+    value === "box-eraser" ||
+    value === "line" ||
+    value === "rect-outline" ||
+    value === "rect-fill" ||
+    value === "ellipse-outline" ||
+    value === "ellipse-fill"
+  );
 }
 
 function isDisplayProfileId(value: unknown): value is DisplayProfileId {

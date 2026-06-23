@@ -115,6 +115,86 @@ button {
   min-width: max-content;
 }
 
+.menu-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: max-content;
+}
+
+.menu-root {
+  position: relative;
+}
+
+.menu-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #f1f1f1;
+  background: transparent;
+  cursor: pointer;
+}
+
+.menu-button:hover,
+.menu-button[aria-expanded="true"] {
+  border-color: #343434;
+  background: #151515;
+}
+
+.menu-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  display: grid;
+  gap: 3px;
+  min-width: 194px;
+  padding: 6px;
+  border: 1px solid #3d3d3d;
+  border-radius: 7px;
+  background: #0b0b0b;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.72);
+}
+
+.menu-popover button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 31px;
+  padding: 0 9px;
+  border-radius: 5px;
+  color: #f2f2f2;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-popover button:hover {
+  background: #202020;
+}
+
+.menu-popover button:disabled {
+  color: #6b6b6b;
+  cursor: not-allowed;
+}
+
+.menu-check {
+  width: 7px;
+  height: 7px;
+  border: 1px solid #5a5a5a;
+  border-radius: 50%;
+}
+
+.menu-check.is-on {
+  border-color: #ffffff;
+  background: #ffffff;
+}
+
 .command-button,
 .icon-button,
 .tool-button {
@@ -242,6 +322,19 @@ button {
   white-space: nowrap;
 }
 
+.display-chip {
+  min-width: 190px;
+  margin-left: auto;
+  padding: 8px 10px;
+  border: 1px solid #2c2c2c;
+  border-radius: 7px;
+  color: #d8d8d8;
+  background: #101010;
+  font-size: 12px;
+  text-align: center;
+  white-space: nowrap;
+}
+
 .select-field select {
   width: 100%;
   height: 34px;
@@ -266,6 +359,8 @@ button {
   align-items: center;
   gap: 8px;
   padding: 12px 0;
+  overflow-y: auto;
+  overflow-x: visible;
   border-right: 1px solid #2c2c2c;
   background: #0c0c0c;
 }
@@ -308,6 +403,28 @@ button {
 
 .subpixel-canvas--simulated {
   cursor: crosshair;
+}
+
+.subpixel-canvas.is-panning {
+  cursor: grabbing;
+}
+
+.grid-menu-root {
+  position: relative;
+}
+
+.grid-popover {
+  position: absolute;
+  left: 48px;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid #3d3d3d;
+  border-radius: 7px;
+  background: #0b0b0b;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.72);
 }
 
 .cell-readout {

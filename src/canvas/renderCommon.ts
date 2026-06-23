@@ -28,7 +28,7 @@ export function drawGrid(
 ): void {
   if (options.showGrid && cellWidth >= 5 && cellHeight >= 5) {
     ctx.beginPath();
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
     ctx.lineWidth = 1;
 
     for (let x = 0; x <= widthSubpixels; x += 1) {
@@ -48,7 +48,7 @@ export function drawGrid(
 
   if (options.showPixelBoundaries) {
     ctx.beginPath();
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.34)";
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
     ctx.lineWidth = 1.5;
 
     for (let x = 0; x <= widthSubpixels; x += 3) {
@@ -65,6 +65,27 @@ export function drawGrid(
 
     ctx.stroke();
   }
+}
+
+export function drawOriginPoint(
+  ctx: CanvasRenderingContext2D,
+  widthSubpixels: number,
+  heightSubpixels: number,
+  cellWidth: number,
+  cellHeight: number
+): void {
+  const x = (widthSubpixels * cellWidth) / 2;
+  const y = (heightSubpixels * cellHeight) / 2;
+
+  ctx.save();
+  ctx.fillStyle = "#ffffff";
+  ctx.strokeStyle = "#050505";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(x, y, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
 }
 
 export function drawSubpixelCells(
@@ -86,4 +107,3 @@ export function drawSubpixelCells(
     }
   }
 }
-

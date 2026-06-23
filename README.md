@@ -8,8 +8,8 @@ Traditional pixel art tools treat one screen pixel as one editable square. Subpi
 R G B | R G B | R G B
 ```
 
-That makes a 32 x 32 real-pixel document a 96 x 32 editable subpixel canvas.
-New documents default to 32 x 32 real pixels, and Subpix v1 supports custom documents from 1 x 1 through 512 x 512 real pixels.
+That makes a 128 x 128 real-pixel document a 384 x 128 editable subpixel canvas.
+New documents default to 128 x 128 real pixels, and Subpix v1 supports custom documents from 1 x 1 through 512 x 512 real pixels.
 
 ## Why `.subpix` Exists
 
@@ -51,7 +51,7 @@ Version 1 uses readable JSON saved with a `.subpix` extension. The internal MIME
 }
 ```
 
-For a 32 x 32 document, each layer's `data` array contains `32 * 3 * 32 = 3072` intensity values. Each value is an integer from 0 to 255. The first editor tools draw in binary values: brush writes 255 and eraser writes 0. The format already allows intermediate intensities for later grayscale tools.
+For a 128 x 128 document, each layer's `data` array contains `128 * 3 * 128 = 49152` intensity values. Each value is an integer from 0 to 255. The first editor tools draw in binary values: brush and shapes write 255, while erasers write 0. The format already allows intermediate intensities for later grayscale tools.
 
 ## RGB and BGR Compatibility
 
@@ -70,6 +70,7 @@ The app includes three display profile options:
 ## Canvas
 
 The canvas is an editable simulated subpixel screen. Each logical slot is shown as an enlarged horizontal RGB/BGR stripe, so the editor always shows the same subpixel structure that a simulated preview would show.
+The editor coordinate origin is shown as a small point at the center of the canvas. The file format still stores the layer as a normal array, so existing `.subpix` files remain compatible.
 Final RGB pixels are still available through **Export PNG**.
 The right panel includes a **Subpixel Signal** readout that shows active logical slot counts and remaps the channel labels when switching between RGB and BGR display profiles.
 It also includes an **Export** readout with PNG size, RGBA byte count, render order, and logical slot-to-channel mapping.
@@ -77,26 +78,44 @@ It also includes an **Export** readout with PNG size, RGBA byte count, render or
 ## Tools
 
 - Brush
-- Eraser
+- Cell eraser
+- Box eraser, which previews a red selection box and clears every subpixel inside it on release
+- Lines, with Shift locking to horizontal or vertical 90-degree strokes
+- Rectangle outlines and filled rectangles
+- Ellipse outlines and filled ellipses
 - Clear canvas
 - Undo and redo
-- Zoom in and out
-- Grid toggle
-- Pixel-boundary toggle every three subpixel columns
+- Zoom in and out, including mouse-wheel zoom over the canvas
+- Zoom to drawing, which recenters the viewport around active artwork or the canvas origin
+- Combined grid menu with grid and pixel-boundary toggles
 - Calibration and slot-sweep pattern insertion
 
-The canvas is scrollable, which provides practical panning for zoomed-in documents.
+The canvas is scrollable, and holding the right mouse button while dragging pans across the workspace.
 Subpix remembers local workspace preferences, including selected tool, display profile, zoom, grid visibility, and pixel-boundary visibility.
 The pattern controls insert deterministic `.subpix` artwork into the active layer, including RGB calibration bars and a grayscale-compatible slot sweep for preview/export checks.
+
+Useful keyboard binds:
+
+- `B`: brush
+- `E`: cell eraser
+- `X`: box eraser
+- `L`: line
+- `R`: rectangle outline
+- `F`: filled rectangle
+- `O`: ellipse outline
+- `I`: filled ellipse
+- `G`: grid
+- `P`: pixel boundaries
+- `0`: zoom to drawing
 
 ## Desktop Menus
 
 The Electron build includes native desktop menus for common work:
 
 - **File**: new documents, open, save, save as, and PNG export
-- **Edit**: undo, redo, brush, eraser, and clear canvas
-- **Tools**: calibration bars and slot-sweep pattern insertion
-- **View**: zoom, grid, and pixel boundaries
+- **Edit**: undo, redo, erasers, brush, and clear canvas
+- **Tools**: shape tools, calibration bars, and slot-sweep pattern insertion
+- **View**: zoom, zoom to drawing, grid, and pixel boundaries
 - **Display**: RGB stripe, BGR stripe, and incompatible simulated-only profiles
 
 These menu actions are routed through the same editor commands as the toolbar and keyboard shortcuts.

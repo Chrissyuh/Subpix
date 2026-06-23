@@ -15,6 +15,18 @@ interface CanvasMetrics {
   subpixelCellHeight: number;
 }
 
+interface CellPoint {
+  x: number;
+  y: number;
+}
+
+interface DragState {
+  current: CellPoint;
+  shiftKey: boolean;
+  start: CellPoint;
+  tool: Tool;
+}
+
 export interface SubpixelCanvasProps {
   document: SubpixDocument;
   order: SubpixOrder;
@@ -24,7 +36,9 @@ export interface SubpixelCanvasProps {
   showPixelBoundaries: boolean;
   onBeginStroke: () => void;
   onPaintCell: (x: number, y: number, intensity: number) => void;
+  onPaintCells: (cells: CellPoint[], intensity: number) => void;
   onEndStroke: () => void;
+  onWheelZoom: (direction: 1 | -1) => void;
 }
 
 function getCanvasMetrics(document: SubpixDocument, zoom: number): CanvasMetrics {
@@ -38,6 +52,162 @@ function getCanvasMetrics(document: SubpixDocument, zoom: number): CanvasMetrics
   };
 }
 
+function isBrushTool(tool: Tool): boolean {
+  return tool === "brush" || tool === "eraser";
+}
+
+function clampCell(cell: CellPoint, widthSubpixels: number, heightSubpixels: number): CellPoint {
+  return {
+    x: Math.max(0, Math.min(widthSubpixels - 1, cell.x)),
+    y: Math.max(0, Math.min(heightSubpixels - 1, cell.y))
+  };
+}
+
+function normalizedBounds(start: CellPoint, current: CellPoint): { maxX: number; maxY: number; minX: number; minY: number } {
+  return {
+    maxX: Math.max(start.x, current.x),
+    maxY: Math.max(start.y, current.y),
+    minX: Math.min(start.x, current.x),
+    minY: Math.min(start.y, current.y)
+  };
+}
+
+function lockLineToAxis(start: CellPoint, current: CellPoint, shiftKey: boolean): CellPoint {
+  if (!shiftKey) {
+    return current;
+  }
+
+  return Math.abs(current.x - start.x) >= Math.abs(current.y - start.y)
+    ? { x: current.x, y: start.y }
+    : { x: start.x, y: current.y };
+}
+
+function lineCells(start: CellPoint, end: CellPoint): CellPoint[] {
+  const cells: CellPoint[] = [];
+  let x = start.x;
+  let y = start.y;
+  const dx = Math.abs(end.x - start.x);
+  const dy = Math.abs(end.y - start.y);
+  const sx = start.x < end.x ? 1 : -1;
+  const sy = start.y < end.y ? 1 : -1;
+  let error = dx - dy;
+
+  while (true) {
+    cells.push({ x, y });
+    if (x === end.x && y === end.y) {
+      return cells;
+    }
+
+    const doubledError = error * 2;
+    if (doubledError > -dy) {
+      error -= dy;
+      x += sx;
+    }
+    if (doubledError < dx) {
+      error += dx;
+      y += sy;
+    }
+  }
+}
+
+function rectangleCells(start: CellPoint, current: CellPoint, fill: boolean): CellPoint[] {
+  const bounds = normalizedBounds(start, current);
+  const cells: CellPoint[] = [];
+
+  for (let y = bounds.minY; y <= bounds.maxY; y += 1) {
+    for (let x = bounds.minX; x <= bounds.maxX; x += 1) {
+      if (fill || x === bounds.minX || x === bounds.maxX || y === bounds.minY || y === bounds.maxY) {
+        cells.push({ x, y });
+      }
+    }
+  }
+
+  return cells;
+}
+
+function ellipseCells(start: CellPoint, current: CellPoint, fill: boolean): CellPoint[] {
+  const bounds = normalizedBounds(start, current);
+  const cells: CellPoint[] = [];
+  const radiusX = Math.max(0.5, (bounds.maxX - bounds.minX + 1) / 2);
+  const radiusY = Math.max(0.5, (bounds.maxY - bounds.minY + 1) / 2);
+  const centerX = bounds.minX + radiusX - 0.5;
+  const centerY = bounds.minY + radiusY - 0.5;
+  const edgeTolerance = Math.max(0.18, Math.min(0.42, 1 / Math.max(radiusX, radiusY)));
+
+  for (let y = bounds.minY; y <= bounds.maxY; y += 1) {
+    for (let x = bounds.minX; x <= bounds.maxX; x += 1) {
+      const normalized =
+        ((x - centerX) * (x - centerX)) / (radiusX * radiusX) +
+        ((y - centerY) * (y - centerY)) / (radiusY * radiusY);
+
+      if (fill ? normalized <= 1 : Math.abs(normalized - 1) <= edgeTolerance) {
+        cells.push({ x, y });
+      }
+    }
+  }
+
+  return cells;
+}
+
+function cellsForDrag(drag: DragState): CellPoint[] {
+  const current = drag.tool === "line" ? lockLineToAxis(drag.start, drag.current, drag.shiftKey) : drag.current;
+
+  switch (drag.tool) {
+    case "line":
+      return lineCells(drag.start, current);
+    case "rect-outline":
+      return rectangleCells(drag.start, current, false);
+    case "box-eraser":
+      return rectangleCells(drag.start, current, true);
+    case "rect-fill":
+      return rectangleCells(drag.start, current, true);
+    case "ellipse-outline":
+      return ellipseCells(drag.start, current, false);
+    case "ellipse-fill":
+      return ellipseCells(drag.start, current, true);
+    default:
+      return [];
+  }
+}
+
+function drawDragPreview(ctx: CanvasRenderingContext2D, drag: DragState, metrics: CanvasMetrics): void {
+  const current = drag.tool === "line" ? lockLineToAxis(drag.start, drag.current, drag.shiftKey) : drag.current;
+  const bounds = normalizedBounds(drag.start, current);
+
+  ctx.save();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = drag.tool === "box-eraser" ? "#ff3434" : "rgba(255, 255, 255, 0.9)";
+  ctx.fillStyle = drag.tool === "box-eraser" ? "rgba(255, 52, 52, 0.08)" : "rgba(255, 255, 255, 0.12)";
+
+  if (drag.tool === "line") {
+    ctx.beginPath();
+    ctx.moveTo((drag.start.x + 0.5) * metrics.subpixelCellWidth, (drag.start.y + 0.5) * metrics.subpixelCellHeight);
+    ctx.lineTo((current.x + 0.5) * metrics.subpixelCellWidth, (current.y + 0.5) * metrics.subpixelCellHeight);
+    ctx.stroke();
+  } else {
+    const x = bounds.minX * metrics.subpixelCellWidth;
+    const y = bounds.minY * metrics.subpixelCellHeight;
+    const width = (bounds.maxX - bounds.minX + 1) * metrics.subpixelCellWidth;
+    const height = (bounds.maxY - bounds.minY + 1) * metrics.subpixelCellHeight;
+
+    if (drag.tool === "ellipse-outline" || drag.tool === "ellipse-fill") {
+      ctx.beginPath();
+      ctx.ellipse(x + width / 2, y + height / 2, width / 2, height / 2, 0, 0, Math.PI * 2);
+      if (drag.tool === "ellipse-fill") {
+        ctx.fill();
+      }
+      ctx.stroke();
+    } else {
+      if (drag.tool === "rect-fill" || drag.tool === "box-eraser") {
+        ctx.fillRect(x, y, width, height);
+      }
+      ctx.strokeRect(x, y, width, height);
+    }
+  }
+
+  ctx.restore();
+}
+
 export function SubpixelCanvas({
   document,
   order,
@@ -47,12 +217,17 @@ export function SubpixelCanvas({
   showPixelBoundaries,
   onBeginStroke,
   onPaintCell,
-  onEndStroke
+  onPaintCells,
+  onEndStroke,
+  onWheelZoom
 }: SubpixelCanvasProps): ReactElement {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawingRef = useRef(false);
   const lastPaintedRef = useRef<string | null>(null);
+  const panRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
   const [pointerCell, setPointerCell] = useState<{ x: number; y: number } | null>(null);
+  const [dragState, setDragState] = useState<DragState | null>(null);
+  const [isPanning, setIsPanning] = useState(false);
   const metrics = useMemo(() => getCanvasMetrics(document, zoom), [document, zoom]);
 
   useEffect(() => {
@@ -82,7 +257,11 @@ export function SubpixelCanvas({
       showGrid,
       showPixelBoundaries
     });
-  }, [document, metrics, order, showGrid, showPixelBoundaries, zoom]);
+
+    if (dragState) {
+      drawDragPreview(ctx, dragState, metrics);
+    }
+  }, [document, dragState, metrics, order, showGrid, showPixelBoundaries, zoom]);
 
   function getCellFromPointer(event: React.PointerEvent<HTMLCanvasElement>): { x: number; y: number } | null {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -108,7 +287,27 @@ export function SubpixelCanvas({
     onPaintCell(cell.x, cell.y, tool === "brush" ? 255 : 0);
   }
 
+  function scrollWorkspace(event: React.PointerEvent<HTMLCanvasElement>): void {
+    const pan = panRef.current;
+    const workspace = event.currentTarget.closest(".workspace");
+    if (!pan || !(workspace instanceof HTMLElement)) {
+      return;
+    }
+
+    workspace.scrollLeft -= event.clientX - pan.x;
+    workspace.scrollTop -= event.clientY - pan.y;
+    panRef.current = { ...pan, x: event.clientX, y: event.clientY };
+  }
+
   function handlePointerDown(event: React.PointerEvent<HTMLCanvasElement>): void {
+    if (event.button === 2) {
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      panRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+      setIsPanning(true);
+      return;
+    }
+
     if (event.button !== 0) {
       return;
     }
@@ -121,24 +320,70 @@ export function SubpixelCanvas({
     event.currentTarget.setPointerCapture(event.pointerId);
     setPointerCell(cell);
 
-    drawingRef.current = true;
-    lastPaintedRef.current = null;
-    onBeginStroke();
-    paintCell(cell);
-  }
-
-  function handlePointerMove(event: React.PointerEvent<HTMLCanvasElement>): void {
-    const cell = getCellFromPointer(event);
-    setPointerCell(cell);
-
-    if (!cell || !drawingRef.current) {
+    if (isBrushTool(tool)) {
+      drawingRef.current = true;
+      lastPaintedRef.current = null;
+      onBeginStroke();
+      paintCell(cell);
       return;
     }
 
-    paintCell(cell);
+    setDragState({ current: cell, shiftKey: event.shiftKey, start: cell, tool });
+  }
+
+  function handlePointerMove(event: React.PointerEvent<HTMLCanvasElement>): void {
+    if (panRef.current) {
+      event.preventDefault();
+      scrollWorkspace(event);
+      return;
+    }
+
+    const cell = getCellFromPointer(event);
+    setPointerCell(cell);
+
+    if (!cell) {
+      return;
+    }
+
+    if (dragState) {
+      const widthSubpixels = getWidthSubpixels(document);
+      const heightSubpixels = getHeightSubpixels(document);
+      setDragState((drag) =>
+        drag
+          ? {
+              ...drag,
+              current: clampCell(cell, widthSubpixels, heightSubpixels),
+              shiftKey: event.shiftKey
+            }
+          : drag
+      );
+      return;
+    }
+
+    if (drawingRef.current) {
+      paintCell(cell);
+    }
   }
 
   function handlePointerUp(): void {
+    if (panRef.current) {
+      panRef.current = null;
+      setIsPanning(false);
+      return;
+    }
+
+    if (dragState) {
+      const cells = cellsForDrag(dragState);
+      setDragState(null);
+
+      if (cells.length > 0) {
+        onBeginStroke();
+        onPaintCells(cells, dragState.tool === "box-eraser" ? 0 : 255);
+        onEndStroke();
+      }
+      return;
+    }
+
     if (drawingRef.current) {
       drawingRef.current = false;
       lastPaintedRef.current = null;
@@ -146,21 +391,35 @@ export function SubpixelCanvas({
     }
   }
 
+  function handleWheel(event: React.WheelEvent<HTMLCanvasElement>): void {
+    event.preventDefault();
+    onWheelZoom(event.deltaY < 0 ? 1 : -1);
+  }
+
+  function originAdjustedCell(cell: CellPoint): CellPoint {
+    return {
+      x: cell.x - Math.floor(getWidthSubpixels(document) / 2),
+      y: cell.y - Math.floor(getHeightSubpixels(document) / 2)
+    };
+  }
+
   return (
     <div className="canvas-stage">
       <canvas
         ref={canvasRef}
         aria-label="Subpixel artwork canvas"
-        className="subpixel-canvas subpixel-canvas--simulated"
+        className={`subpixel-canvas subpixel-canvas--simulated${isPanning ? " is-panning" : ""}`}
+        onContextMenu={(event) => event.preventDefault()}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         onPointerLeave={() => setPointerCell(null)}
+        onWheel={handleWheel}
       />
       {pointerCell ? (
         <div className="cell-readout">
-          {pointerCell.x}, {pointerCell.y}
+          {originAdjustedCell(pointerCell).x}, {originAdjustedCell(pointerCell).y}
         </div>
       ) : null}
     </div>

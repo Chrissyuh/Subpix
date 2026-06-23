@@ -1,4 +1,4 @@
-import { clearCanvas, colorForSlot, drawGrid, type GridOptions } from "@/canvas/renderCommon";
+import { clearCanvas, colorForSlot, drawGrid, drawOriginPoint, type GridOptions } from "@/canvas/renderCommon";
 import { getCompositeSubpixelIntensities } from "@/format/exportPng";
 import { getWidthSubpixels, type SubpixDocument, type SubpixOrder } from "@/format/subpixTypes";
 
@@ -30,5 +30,5 @@ export function renderSimulatedView(
   }
 
   drawGrid(ctx, widthSubpixels, heightPixels, options.subpixelWidth, options.pixelHeight, options);
+  drawOriginPoint(ctx, widthSubpixels, heightPixels, options.subpixelWidth, options.pixelHeight);
 }
-
