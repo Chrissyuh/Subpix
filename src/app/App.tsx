@@ -1,21 +1,14 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement, type ReactNode } from "react";
 import {
   Brush,
   Check,
-  ChevronDown,
   Circle,
-  Download,
   Eraser,
   Eye,
   EyeOff,
-  FilePlus2,
-  FolderOpen,
   Grid2X2,
   Minus,
-  Palette,
   Redo2,
-  Save,
-  SaveAll,
   Square,
   Sparkles,
   Trash2,
@@ -77,7 +70,38 @@ const TOOL_LABELS: Record<Tool, string> = {
   "ellipse-fill": "Filled Ellipse"
 };
 
-type TopMenuId = "file" | "edit" | "view" | "tools" | "display";
+type TopMenuId = "file" | "edit" | "view" | "image" | "tools" | "display" | "help";
+
+interface MenuItemProps {
+  children: ReactNode;
+  checked?: boolean;
+  disabled?: boolean;
+  hasSubmenu?: boolean;
+  onClick?: () => void;
+  shortcut?: string;
+}
+
+function MenuItem({ children, checked, disabled, hasSubmenu, onClick, shortcut }: MenuItemProps): ReactElement {
+  return (
+    <button
+      aria-checked={checked === undefined ? undefined : checked}
+      className={checked ? "menu-item is-checked" : "menu-item"}
+      disabled={disabled}
+      onClick={onClick}
+      role={checked === undefined ? "menuitem" : "menuitemcheckbox"}
+      type="button"
+    >
+      <span className="menu-item__mark">{checked ? <Check size={13} strokeWidth={2.6} /> : null}</span>
+      <span className="menu-item__label">{children}</span>
+      {shortcut ? <span className="menu-item__shortcut">{shortcut}</span> : null}
+      {hasSubmenu ? <span className="menu-item__submenu">&gt;</span> : null}
+    </button>
+  );
+}
+
+function MenuSeparator(): ReactElement {
+  return <div className="menu-separator" role="separator" />;
+}
 
 interface NewDocumentDraft {
   name: string;
@@ -238,6 +262,9 @@ export function App(): ReactElement {
         } else if (key === "s") {
           event.preventDefault();
           void handleSave(event.shiftKey);
+        } else if (key === "e" && event.shiftKey) {
+          event.preventDefault();
+          void handleExportPng();
         } else if (key === "o") {
           event.preventDefault();
           void handleOpen();
@@ -310,12 +337,44 @@ export function App(): ReactElement {
     return displayProfile === "bgr-horizontal" ? "BGR compatible" : "Compatible";
   }, [displayProfile, packedAvailable]);
 
-  function selectTool(nextTool: Tool): void {
-    setTool(nextTool);
+  function closeMenus(): void {
     setActiveTopMenu(null);
     setIsEllipseMenuOpen(false);
     setIsGridMenuOpen(false);
     setIsRectangleMenuOpen(false);
+  }
+
+  function toggleTopMenu(menuId: TopMenuId): void {
+    setIsEllipseMenuOpen(false);
+    setIsGridMenuOpen(false);
+    setIsRectangleMenuOpen(false);
+    setActiveTopMenu(activeTopMenu === menuId ? null : menuId);
+  }
+
+  function switchTopMenu(menuId: TopMenuId): void {
+    if (activeTopMenu) {
+      setActiveTopMenu(menuId);
+    }
+  }
+
+  function runMenuAction(action: () => void): void {
+    closeMenus();
+    action();
+  }
+
+  function runAsyncMenuAction(action: () => Promise<void>): void {
+    closeMenus();
+    void action();
+  }
+
+  function showAbout(): void {
+    window.alert("Subpix\n\nSubpixel Image Studio for logical RGB/BGR horizontal stripe artwork and .subpix files.");
+    setStatusMessage("Subpix edits logical horizontal stripe subpixel images.");
+  }
+
+  function selectTool(nextTool: Tool): void {
+    setTool(nextTool);
+    closeMenus();
     setStatusMessage(`${TOOL_LABELS[nextTool]} selected.`);
   }
 
@@ -339,7 +398,7 @@ export function App(): ReactElement {
 
   function chooseDisplayProfile(nextProfile: DisplayProfileId): void {
     setDisplayProfile(nextProfile);
-    setActiveTopMenu(null);
+    closeMenus();
     setStatusMessage(`${getDisplayProfileLabel(nextProfile)} display selected.`);
   }
 
@@ -395,7 +454,7 @@ export function App(): ReactElement {
 
     setZoom(nextZoom);
     scrollWorkspaceToBounds(bounds, nextZoom);
-    setActiveTopMenu(null);
+    closeMenus();
     setStatusMessage(activeBounds ? "Zoomed to active drawing." : "Centered on the canvas origin.");
   }
 
@@ -657,34 +716,50 @@ export function App(): ReactElement {
           <div className="menu-root">
             <button
               className="menu-button"
+              type="button"
+              aria-haspopup="menu"
               aria-expanded={activeTopMenu === "file"}
-              onClick={() => setActiveTopMenu(activeTopMenu === "file" ? null : "file")}
+              onClick={() => toggleTopMenu("file")}
+              onMouseEnter={() => switchTopMenu("file")}
             >
               File
-              <ChevronDown size={14} />
             </button>
             {activeTopMenu === "file" ? (
-              <div className="menu-popover">
-                <button onClick={handleNew}>
-                  <FilePlus2 size={15} />
-                  New
-                </button>
-                <button onClick={() => void handleOpen()}>
-                  <FolderOpen size={15} />
-                  Open
-                </button>
-                <button onClick={() => void handleSave(false)}>
-                  <Save size={15} />
+              <div className="menu-popover" role="menu">
+                <MenuItem shortcut="Ctrl+N" onClick={() => runMenuAction(handleNew)}>
+                  New Subpixel Image
+                </MenuItem>
+                <MenuItem shortcut="Ctrl+O" onClick={() => runAsyncMenuAction(handleOpen)}>
+                  Open...
+                </MenuItem>
+                <MenuItem disabled hasSubmenu>
+                  Open Recent
+                </MenuItem>
+                <MenuSeparator />
+                <MenuItem shortcut="Ctrl+S" onClick={() => runAsyncMenuAction(() => handleSave(false))}>
                   Save
-                </button>
-                <button onClick={() => void handleSave(true)}>
-                  <SaveAll size={15} />
-                  Save As
-                </button>
-                <button onClick={() => void handleExportPng()} disabled={!packedAvailable}>
-                  <Download size={15} />
-                  Export PNG
-                </button>
+                </MenuItem>
+                <MenuItem shortcut="Ctrl+Shift+S" onClick={() => runAsyncMenuAction(() => handleSave(true))}>
+                  Save As...
+                </MenuItem>
+                <MenuItem disabled>Save Copy...</MenuItem>
+                <MenuSeparator />
+                <MenuItem
+                  disabled={!packedAvailable}
+                  shortcut="Ctrl+Shift+E"
+                  onClick={() => runAsyncMenuAction(handleExportPng)}
+                >
+                  Export PNG...
+                </MenuItem>
+                <MenuItem disabled>Export Preview Sheet...</MenuItem>
+                <MenuSeparator />
+                <MenuItem disabled>Document Setup...</MenuItem>
+                <MenuItem disabled>Print...</MenuItem>
+                <MenuSeparator />
+                <MenuItem disabled shortcut="Ctrl+W">
+                  Close File
+                </MenuItem>
+                <MenuItem disabled>Exit</MenuItem>
               </div>
             ) : null}
           </div>
@@ -692,26 +767,47 @@ export function App(): ReactElement {
           <div className="menu-root">
             <button
               className="menu-button"
+              type="button"
+              aria-haspopup="menu"
               aria-expanded={activeTopMenu === "edit"}
-              onClick={() => setActiveTopMenu(activeTopMenu === "edit" ? null : "edit")}
+              onClick={() => toggleTopMenu("edit")}
+              onMouseEnter={() => switchTopMenu("edit")}
             >
               Edit
-              <ChevronDown size={14} />
             </button>
             {activeTopMenu === "edit" ? (
-              <div className="menu-popover">
-                <button onClick={actions.undo} disabled={state.past.length === 0}>
-                  <Undo2 size={15} />
+              <div className="menu-popover" role="menu">
+                <MenuItem shortcut="Ctrl+Z" disabled={state.past.length === 0} onClick={() => runMenuAction(actions.undo)}>
                   Undo
-                </button>
-                <button onClick={actions.redo} disabled={state.future.length === 0}>
-                  <Redo2 size={15} />
+                </MenuItem>
+                <MenuItem shortcut="Ctrl+Y" disabled={state.future.length === 0} onClick={() => runMenuAction(actions.redo)}>
                   Redo
-                </button>
-                <button onClick={actions.clearCanvas}>
-                  <Trash2 size={15} />
+                </MenuItem>
+                <MenuSeparator />
+                <MenuItem disabled shortcut="Ctrl+X">
+                  Cut
+                </MenuItem>
+                <MenuItem disabled shortcut="Ctrl+C">
+                  Copy
+                </MenuItem>
+                <MenuItem disabled shortcut="Ctrl+V">
+                  Paste
+                </MenuItem>
+                <MenuItem disabled shortcut="Del">
+                  Delete
+                </MenuItem>
+                <MenuSeparator />
+                <MenuItem shortcut="Ctrl+Backspace" onClick={() => runMenuAction(actions.clearCanvas)}>
                   Clear Canvas
-                </button>
+                </MenuItem>
+                <MenuItem disabled shortcut="Ctrl+A">
+                  Select All
+                </MenuItem>
+                <MenuSeparator />
+                <MenuItem disabled shortcut="Ctrl+F">
+                  Find Subpixels
+                </MenuItem>
+                <MenuItem disabled>Preferences...</MenuItem>
               </div>
             ) : null}
           </div>
@@ -719,38 +815,51 @@ export function App(): ReactElement {
           <div className="menu-root">
             <button
               className="menu-button"
+              type="button"
+              aria-haspopup="menu"
               aria-expanded={activeTopMenu === "view"}
-              onClick={() => setActiveTopMenu(activeTopMenu === "view" ? null : "view")}
+              onClick={() => toggleTopMenu("view")}
+              onMouseEnter={() => switchTopMenu("view")}
             >
               View
-              <ChevronDown size={14} />
             </button>
             {activeTopMenu === "view" ? (
-              <div className="menu-popover">
-                <button onClick={() => adjustZoom(zoom - ZOOM_STEP)} disabled={zoom <= MIN_ZOOM}>
-                  <ZoomOut size={15} />
+              <div className="menu-popover" role="menu">
+                <MenuItem
+                  shortcut="Ctrl+-"
+                  disabled={zoom <= MIN_ZOOM}
+                  onClick={() => runMenuAction(() => adjustZoom(zoom - ZOOM_STEP))}
+                >
                   Zoom Out
-                </button>
-                <button onClick={() => adjustZoom(zoom + ZOOM_STEP)} disabled={zoom >= MAX_ZOOM}>
-                  <ZoomIn size={15} />
+                </MenuItem>
+                <MenuItem
+                  shortcut="Ctrl+="
+                  disabled={zoom >= MAX_ZOOM}
+                  onClick={() => runMenuAction(() => adjustZoom(zoom + ZOOM_STEP))}
+                >
                   Zoom In
-                </button>
-                <button onClick={zoomToDrawing}>
-                  <ZoomIn size={15} />
+                </MenuItem>
+                <MenuItem shortcut="Ctrl+0" onClick={() => runMenuAction(zoomToDrawing)}>
                   Zoom To Drawing
-                </button>
-                <button onClick={toggleGrid}>
-                  <Grid2X2 size={15} />
-                  {showGrid ? "Hide Grid" : "Show Grid"}
-                </button>
-                <button onClick={togglePixelBoundaries}>
-                  {showPixelBoundaries ? <EyeOff size={15} /> : <Eye size={15} />}
-                  {showPixelBoundaries ? "Hide Pixel Boundaries" : "Show Pixel Boundaries"}
-                </button>
-                <button onClick={toggleIgnoreColor}>
-                  <Palette size={15} />
-                  {ignoreColor ? "Show Color" : "Ignore Color"}
-                </button>
+                </MenuItem>
+                <MenuItem disabled shortcut="Ctrl+1">
+                  Actual Size
+                </MenuItem>
+                <MenuSeparator />
+                <MenuItem checked={showGrid} shortcut="G" onClick={() => runMenuAction(toggleGrid)}>
+                  Grid
+                </MenuItem>
+                <MenuItem checked={showPixelBoundaries} shortcut="P" onClick={() => runMenuAction(togglePixelBoundaries)}>
+                  Pixel Boundaries
+                </MenuItem>
+                <MenuItem checked={ignoreColor} shortcut="C" onClick={() => runMenuAction(toggleIgnoreColor)}>
+                  Ignore Color
+                </MenuItem>
+                <MenuSeparator />
+                <MenuItem disabled>Right Inspector</MenuItem>
+                <MenuItem disabled shortcut="F11">
+                  Full Screen
+                </MenuItem>
               </div>
             ) : null}
           </div>
@@ -758,46 +867,77 @@ export function App(): ReactElement {
           <div className="menu-root">
             <button
               className="menu-button"
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={activeTopMenu === "image"}
+              onClick={() => toggleTopMenu("image")}
+              onMouseEnter={() => switchTopMenu("image")}
+            >
+              Image
+            </button>
+            {activeTopMenu === "image" ? (
+              <div className="menu-popover" role="menu">
+                <MenuItem disabled>Canvas Size...</MenuItem>
+                <MenuItem disabled>Resize Canvas...</MenuItem>
+                <MenuItem disabled>Trim To Drawing</MenuItem>
+                <MenuSeparator />
+                <MenuItem shortcut="Ctrl+Backspace" onClick={() => runMenuAction(actions.clearCanvas)}>
+                  Clear Canvas
+                </MenuItem>
+                <MenuSeparator />
+                <MenuItem onClick={() => runMenuAction(() => insertPattern("calibration-bars"))}>
+                  Insert Calibration Bars
+                </MenuItem>
+                <MenuItem onClick={() => runMenuAction(() => insertPattern("slot-sweep"))}>Insert Slot Sweep</MenuItem>
+                <MenuSeparator />
+                <MenuItem disabled>Flip Horizontal</MenuItem>
+                <MenuItem disabled>Flip Vertical</MenuItem>
+                <MenuItem disabled>Rotate 90 Degrees</MenuItem>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="menu-root">
+            <button
+              className="menu-button"
+              type="button"
+              aria-haspopup="menu"
               aria-expanded={activeTopMenu === "tools"}
-              onClick={() => setActiveTopMenu(activeTopMenu === "tools" ? null : "tools")}
+              onClick={() => toggleTopMenu("tools")}
+              onMouseEnter={() => switchTopMenu("tools")}
             >
               Tools
-              <ChevronDown size={14} />
             </button>
             {activeTopMenu === "tools" ? (
-              <div className="menu-popover">
-                <button onClick={() => selectTool("brush")}>
-                  <Brush size={15} />
+              <div className="menu-popover" role="menu">
+                <MenuItem checked={tool === "brush"} shortcut="B" onClick={() => selectTool("brush")}>
                   Brush
-                </button>
-                <button onClick={() => selectTool("eraser")}>
-                  <Eraser size={15} />
+                </MenuItem>
+                <MenuItem checked={tool === "eraser"} shortcut="E" onClick={() => selectTool("eraser")}>
                   Cell Eraser
-                </button>
-                <button onClick={() => selectTool("box-eraser")}>
-                  <Square size={15} />
+                </MenuItem>
+                <MenuItem checked={tool === "box-eraser"} shortcut="X" onClick={() => selectTool("box-eraser")}>
                   Box Eraser
-                </button>
-                <button onClick={() => selectTool("line")}>
-                  <Minus size={15} />
+                </MenuItem>
+                <MenuSeparator />
+                <MenuItem checked={tool === "line"} shortcut="L" onClick={() => selectTool("line")}>
                   Line
-                </button>
-                <button onClick={() => selectTool("rect-outline")}>
-                  <Square size={15} />
-                  Rectangle
-                </button>
-                <button onClick={() => selectTool("rect-fill")}>
-                  <Square size={15} fill="currentColor" />
+                </MenuItem>
+                <MenuItem checked={tool === "rect-outline"} shortcut="R" onClick={() => selectTool("rect-outline")}>
+                  Rectangle Outline
+                </MenuItem>
+                <MenuItem checked={tool === "rect-fill"} shortcut="F" onClick={() => selectTool("rect-fill")}>
                   Filled Rectangle
-                </button>
-                <button onClick={() => selectTool("ellipse-outline")}>
-                  <Circle size={15} />
-                  Ellipse
-                </button>
-                <button onClick={() => selectTool("ellipse-fill")}>
-                  <Circle size={15} fill="currentColor" />
+                </MenuItem>
+                <MenuItem checked={tool === "ellipse-outline"} shortcut="O" onClick={() => selectTool("ellipse-outline")}>
+                  Ellipse Outline
+                </MenuItem>
+                <MenuItem checked={tool === "ellipse-fill"} shortcut="I" onClick={() => selectTool("ellipse-fill")}>
                   Filled Ellipse
-                </button>
+                </MenuItem>
+                <MenuSeparator />
+                <MenuItem disabled>Brush Size...</MenuItem>
+                <MenuItem disabled>Intensity...</MenuItem>
               </div>
             ) : null}
           </div>
@@ -805,20 +945,56 @@ export function App(): ReactElement {
           <div className="menu-root">
             <button
               className="menu-button"
+              type="button"
+              aria-haspopup="menu"
               aria-expanded={activeTopMenu === "display"}
-              onClick={() => setActiveTopMenu(activeTopMenu === "display" ? null : "display")}
+              onClick={() => toggleTopMenu("display")}
+              onMouseEnter={() => switchTopMenu("display")}
             >
               Display
-              <ChevronDown size={14} />
             </button>
             {activeTopMenu === "display" ? (
-              <div className="menu-popover">
+              <div className="menu-popover menu-popover--align-right" role="menu">
                 {DISPLAY_PROFILES.map((profile) => (
-                  <button key={profile.id} onClick={() => chooseDisplayProfile(profile.id)}>
-                    <span className={displayProfile === profile.id ? "menu-check is-on" : "menu-check"} />
+                  <MenuItem
+                    checked={displayProfile === profile.id}
+                    key={profile.id}
+                    onClick={() => chooseDisplayProfile(profile.id)}
+                  >
                     {profile.label}
-                  </button>
+                  </MenuItem>
                 ))}
+                <MenuSeparator />
+                <MenuItem checked={ignoreColor} shortcut="C" onClick={() => runMenuAction(toggleIgnoreColor)}>
+                  Ignore Color
+                </MenuItem>
+                <MenuItem disabled>Physical 1:1 Preview</MenuItem>
+                <MenuItem disabled>Display Calibration...</MenuItem>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="menu-root">
+            <button
+              className="menu-button"
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={activeTopMenu === "help"}
+              onClick={() => toggleTopMenu("help")}
+              onMouseEnter={() => switchTopMenu("help")}
+            >
+              Help
+            </button>
+            {activeTopMenu === "help" ? (
+              <div className="menu-popover menu-popover--align-right" role="menu">
+                <MenuItem disabled shortcut="F1">
+                  Subpix Help
+                </MenuItem>
+                <MenuItem disabled>Keyboard Shortcuts</MenuItem>
+                <MenuItem disabled>.subpix File Format</MenuItem>
+                <MenuSeparator />
+                <MenuItem disabled>Report Issue</MenuItem>
+                <MenuItem onClick={() => runMenuAction(showAbout)}>About Subpix</MenuItem>
               </div>
             ) : null}
           </div>

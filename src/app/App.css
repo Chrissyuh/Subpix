@@ -32,7 +32,7 @@ button {
 .app-shell {
   display: grid;
   grid-template-columns: 64px minmax(0, 1fr) 294px;
-  grid-template-rows: 70px minmax(0, 1fr) 30px;
+  grid-template-rows: 58px minmax(0, 1fr) 30px;
   width: 100vw;
   height: 100vh;
   color: #f7f7f7;
@@ -43,9 +43,9 @@ button {
   grid-column: 1 / -1;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
-  padding: 12px 14px;
+  padding: 0 10px;
   border-bottom: 1px solid #2c2c2c;
   background: #0c0c0c;
 }
@@ -53,18 +53,18 @@ button {
 .brand-lockup {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-width: 182px;
-  padding-right: 4px;
+  gap: 8px;
+  min-width: 152px;
+  padding-right: 2px;
 }
 
 .brand-mark {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 3px;
-  width: 34px;
-  height: 34px;
-  padding: 5px;
+  gap: 2px;
+  width: 28px;
+  height: 28px;
+  padding: 4px;
   border: 1px solid #ffffff;
   border-radius: 7px;
   background: #050505;
@@ -96,14 +96,14 @@ button {
 
 .brand-copy strong {
   color: #ffffff;
-  font-size: 18px;
+  font-size: 15px;
   line-height: 1;
   letter-spacing: 0;
 }
 
 .brand-copy span {
   color: #9d9d9d;
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1.2;
   white-space: nowrap;
 }
@@ -118,81 +118,116 @@ button {
 .menu-bar {
   display: flex;
   align-items: center;
-  gap: 4px;
+  align-self: stretch;
+  gap: 0;
   min-width: max-content;
 }
 
 .menu-root {
   position: relative;
+  display: flex;
+  align-items: stretch;
 }
 
 .menu-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  height: 34px;
-  padding: 0 10px;
+  height: 100%;
+  padding: 0 11px;
   border: 1px solid transparent;
-  border-radius: 6px;
-  color: #f1f1f1;
+  border-radius: 0;
+  color: #dfdfdf;
   background: transparent;
+  font-size: 14px;
   cursor: pointer;
 }
 
 .menu-button:hover,
 .menu-button[aria-expanded="true"] {
-  border-color: #343434;
-  background: #151515;
+  border-color: transparent;
+  color: #ffffff;
+  background: #2a2a2a;
 }
 
 .menu-popover {
   position: absolute;
-  top: calc(100% + 6px);
+  top: 100%;
   left: 0;
-  z-index: 30;
+  z-index: 90;
   display: grid;
-  gap: 3px;
-  min-width: 194px;
-  padding: 6px;
-  border: 1px solid #3d3d3d;
-  border-radius: 7px;
-  background: #0b0b0b;
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.72);
+  gap: 0;
+  min-width: 304px;
+  padding: 6px 0;
+  border: 1px solid #383838;
+  border-radius: 0 0 8px 8px;
+  background: #252525;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.7);
 }
 
-.menu-popover button {
-  display: flex;
+.menu-popover--align-right {
+  right: 0;
+  left: auto;
+}
+
+.menu-item {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) max-content 14px;
   align-items: center;
   gap: 8px;
-  min-height: 31px;
-  padding: 0 9px;
-  border-radius: 5px;
+  width: 100%;
+  min-height: 30px;
+  padding: 0 12px 0 8px;
   color: #f2f2f2;
   background: transparent;
+  font-size: 14px;
   text-align: left;
-  cursor: pointer;
+  cursor: default;
 }
 
-.menu-popover button:hover {
-  background: #202020;
+.menu-item:hover:not(:disabled) {
+  background: #3a3a3a;
 }
 
-.menu-popover button:disabled {
-  color: #6b6b6b;
-  cursor: not-allowed;
+.menu-item:disabled {
+  color: #858585;
 }
 
-.menu-check {
-  width: 7px;
-  height: 7px;
-  border: 1px solid #5a5a5a;
-  border-radius: 50%;
+.menu-item__mark {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  color: #ffffff;
 }
 
-.menu-check.is-on {
-  border-color: #ffffff;
-  background: #ffffff;
+.menu-item__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu-item__shortcut {
+  color: #c7c7c7;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.menu-item:disabled .menu-item__shortcut,
+.menu-item:disabled .menu-item__submenu {
+  color: #777777;
+}
+
+.menu-item__submenu {
+  color: #d8d8d8;
+  text-align: right;
+}
+
+.menu-separator {
+  height: 1px;
+  margin: 6px 0;
+  background: #3a3a3a;
 }
 
 .command-button,
