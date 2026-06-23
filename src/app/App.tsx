@@ -129,6 +129,8 @@ export function App(): ReactElement {
   const [showPixelBoundaries, setShowPixelBoundaries] = useState(initialPreferences.showPixelBoundaries);
   const [activeTopMenu, setActiveTopMenu] = useState<TopMenuId | null>(null);
   const [isGridMenuOpen, setIsGridMenuOpen] = useState(false);
+  const [isRectangleMenuOpen, setIsRectangleMenuOpen] = useState(false);
+  const [isEllipseMenuOpen, setIsEllipseMenuOpen] = useState(false);
   const [statusMessage, setStatusMessage] = useState("Ready.");
   const [isNewDocumentDialogOpen, setIsNewDocumentDialogOpen] = useState(false);
   const [newDocumentDraft, setNewDocumentDraft] = useState<NewDocumentDraft>(DEFAULT_NEW_DOCUMENT_DRAFT);
@@ -311,6 +313,9 @@ export function App(): ReactElement {
   function selectTool(nextTool: Tool): void {
     setTool(nextTool);
     setActiveTopMenu(null);
+    setIsEllipseMenuOpen(false);
+    setIsGridMenuOpen(false);
+    setIsRectangleMenuOpen(false);
     setStatusMessage(`${TOOL_LABELS[nextTool]} selected.`);
   }
 
@@ -884,38 +889,76 @@ export function App(): ReactElement {
         >
           <Minus size={20} />
         </button>
-        <button
-          className={tool === "rect-outline" ? "tool-button is-selected" : "tool-button"}
-          title="Rectangle outline (R)"
-          aria-pressed={tool === "rect-outline"}
-          onClick={() => selectTool("rect-outline")}
-        >
-          <Square size={20} />
-        </button>
-        <button
-          className={tool === "rect-fill" ? "tool-button is-selected" : "tool-button"}
-          title="Filled rectangle (F)"
-          aria-pressed={tool === "rect-fill"}
-          onClick={() => selectTool("rect-fill")}
-        >
-          <Square size={20} fill="currentColor" />
-        </button>
-        <button
-          className={tool === "ellipse-outline" ? "tool-button is-selected" : "tool-button"}
-          title="Ellipse outline (O)"
-          aria-pressed={tool === "ellipse-outline"}
-          onClick={() => selectTool("ellipse-outline")}
-        >
-          <Circle size={20} />
-        </button>
-        <button
-          className={tool === "ellipse-fill" ? "tool-button is-selected" : "tool-button"}
-          title="Filled ellipse (I)"
-          aria-pressed={tool === "ellipse-fill"}
-          onClick={() => selectTool("ellipse-fill")}
-        >
-          <Circle size={20} fill="currentColor" />
-        </button>
+        <div className="shape-menu-root">
+          <button
+            className={tool === "rect-outline" || tool === "rect-fill" ? "tool-button is-selected" : "tool-button"}
+            title="Rectangle tools"
+            aria-expanded={isRectangleMenuOpen}
+            aria-pressed={tool === "rect-outline" || tool === "rect-fill"}
+            onClick={() => {
+              setIsEllipseMenuOpen(false);
+              setIsGridMenuOpen(false);
+              setIsRectangleMenuOpen(!isRectangleMenuOpen);
+            }}
+          >
+            <Square size={20} fill={tool === "rect-fill" ? "currentColor" : "none"} />
+          </button>
+          {isRectangleMenuOpen ? (
+            <div className="shape-popover">
+              <button
+                className={tool === "rect-outline" ? "tool-button is-selected" : "tool-button"}
+                title="Rectangle outline (R)"
+                aria-pressed={tool === "rect-outline"}
+                onClick={() => selectTool("rect-outline")}
+              >
+                <Square size={18} />
+              </button>
+              <button
+                className={tool === "rect-fill" ? "tool-button is-selected" : "tool-button"}
+                title="Filled rectangle (F)"
+                aria-pressed={tool === "rect-fill"}
+                onClick={() => selectTool("rect-fill")}
+              >
+                <Square size={18} fill="currentColor" />
+              </button>
+            </div>
+          ) : null}
+        </div>
+        <div className="shape-menu-root">
+          <button
+            className={tool === "ellipse-outline" || tool === "ellipse-fill" ? "tool-button is-selected" : "tool-button"}
+            title="Ellipse tools"
+            aria-expanded={isEllipseMenuOpen}
+            aria-pressed={tool === "ellipse-outline" || tool === "ellipse-fill"}
+            onClick={() => {
+              setIsGridMenuOpen(false);
+              setIsRectangleMenuOpen(false);
+              setIsEllipseMenuOpen(!isEllipseMenuOpen);
+            }}
+          >
+            <Circle size={20} fill={tool === "ellipse-fill" ? "currentColor" : "none"} />
+          </button>
+          {isEllipseMenuOpen ? (
+            <div className="shape-popover">
+              <button
+                className={tool === "ellipse-outline" ? "tool-button is-selected" : "tool-button"}
+                title="Ellipse outline (O)"
+                aria-pressed={tool === "ellipse-outline"}
+                onClick={() => selectTool("ellipse-outline")}
+              >
+                <Circle size={18} />
+              </button>
+              <button
+                className={tool === "ellipse-fill" ? "tool-button is-selected" : "tool-button"}
+                title="Filled ellipse (I)"
+                aria-pressed={tool === "ellipse-fill"}
+                onClick={() => selectTool("ellipse-fill")}
+              >
+                <Circle size={18} fill="currentColor" />
+              </button>
+            </div>
+          ) : null}
+        </div>
         <button className="tool-button" title="Clear canvas" onClick={actions.clearCanvas}>
           <Trash2 size={20} />
         </button>
@@ -925,7 +968,11 @@ export function App(): ReactElement {
             className={showGrid || showPixelBoundaries ? "tool-button is-selected" : "tool-button"}
             title="Grid options"
             aria-expanded={isGridMenuOpen}
-            onClick={() => setIsGridMenuOpen(!isGridMenuOpen)}
+            onClick={() => {
+              setIsEllipseMenuOpen(false);
+              setIsRectangleMenuOpen(false);
+              setIsGridMenuOpen(!isGridMenuOpen);
+            }}
           >
             <Grid2X2 size={20} />
           </button>

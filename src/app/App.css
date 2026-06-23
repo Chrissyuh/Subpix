@@ -412,11 +412,13 @@ button {
   cursor: grabbing;
 }
 
-.grid-menu-root {
+.grid-menu-root,
+.shape-menu-root {
   position: relative;
 }
 
-.grid-popover {
+.grid-popover,
+.shape-popover {
   position: absolute;
   left: 48px;
   bottom: 0;
