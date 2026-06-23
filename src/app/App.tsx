@@ -6,6 +6,7 @@ import {
   Eraser,
   Eye,
   EyeOff,
+  Focus,
   Grid2X2,
   Minus,
   Redo2,
@@ -1015,7 +1016,7 @@ export function App(): ReactElement {
             <ZoomIn size={17} />
           </button>
           <button className="icon-button" title="Zoom to drawing (0)" onClick={zoomToDrawing}>
-            <ZoomIn size={17} />
+            <Focus size={17} />
           </button>
         </div>
 
