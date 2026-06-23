@@ -39,6 +39,10 @@ button {
   background: #050505;
 }
 
+.app-shell--inspector-collapsed {
+  grid-template-columns: 64px minmax(0, 1fr) 46px;
+}
+
 .top-bar {
   grid-column: 1 / -1;
   display: flex;
@@ -481,6 +485,10 @@ button {
   pointer-events: none;
 }
 
+.app-shell--inspector-collapsed .cell-readout {
+  right: 70px;
+}
+
 .right-panel {
   grid-column: 3;
   grid-row: 2;
@@ -489,55 +497,56 @@ button {
   background: #0c0c0c;
 }
 
-.panel-section,
-.compatibility {
+.right-panel--collapsed {
+  display: grid;
+  align-content: start;
+  overflow: hidden;
+}
+
+.inspector-rail-button {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 128px;
+  padding: 12px 0;
+  color: #f1f1f1;
+  background: transparent;
+  cursor: pointer;
+}
+
+.inspector-rail-button:hover {
+  color: #050505;
+  background: #ffffff;
+}
+
+.inspector-rail-button span {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.panel-section {
   padding: 18px 18px 16px;
   border-bottom: 1px solid #242424;
 }
 
-.panel-section--identity {
-  padding-top: 20px;
-  padding-bottom: 20px;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 42%),
-    #0f0f0f;
+.panel-section--header {
+  padding: 12px;
+  background: #0f0f0f;
 }
 
-.identity-card {
+.panel-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
 }
 
-.identity-card__mark {
-  display: grid;
-  grid-template-columns: repeat(3, 8px);
-  gap: 4px;
-  padding: 8px;
-  border: 1px solid #ffffff;
-  border-radius: 7px;
-  background: #050505;
-}
-
-.identity-card__mark span {
-  width: 8px;
-  height: 32px;
-  border-radius: 2px;
-}
-
-.identity-card__mark span:nth-child(1) {
-  background: #ff3b3b;
-}
-
-.identity-card__mark span:nth-child(2) {
-  background: #40ff76;
-}
-
-.identity-card__mark span:nth-child(3) {
-  background: #4b7dff;
-}
-
-.identity-card h2 {
+.panel-header h2 {
   margin: 0 0 5px;
   color: #ffffff;
   font-size: 14px;
@@ -546,14 +555,14 @@ button {
   text-transform: uppercase;
 }
 
-.identity-card p {
+.panel-header p {
   margin: 0;
   color: #b9b9b9;
   font-size: 12px;
+  overflow-wrap: anywhere;
 }
 
-.panel-section h2,
-.compatibility h2 {
+.panel-section h2 {
   margin: 0 0 12px;
   color: #ffffff;
   font-size: 13px;
@@ -611,23 +620,6 @@ dd {
   color: #f0f0f0;
   font-size: 13px;
   overflow-wrap: anywhere;
-}
-
-.compatibility {
-  border-left: 4px solid #ffffff;
-  background: #161616;
-}
-
-.compatibility--bad {
-  border-left-color: #ffffff;
-  background: #1d1d1d;
-}
-
-.compatibility p {
-  margin: 0;
-  color: #d8d8d8;
-  font-size: 13px;
-  line-height: 1.45;
 }
 
 .export-readiness {
@@ -856,6 +848,10 @@ dd {
 @media (max-width: 1100px) {
   .app-shell {
     grid-template-columns: 58px minmax(0, 1fr) 250px;
+  }
+
+  .app-shell.app-shell--inspector-collapsed {
+    grid-template-columns: 58px minmax(0, 1fr) 46px;
   }
 
   .brand-copy span,

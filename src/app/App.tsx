@@ -9,6 +9,8 @@ import {
   Focus,
   Grid2X2,
   Minus,
+  PanelRightClose,
+  PanelRightOpen,
   Redo2,
   Square,
   Trash2,
@@ -52,7 +54,6 @@ import {
   getWidthSubpixels,
   isSupportedDocumentDimension,
   normalizeDocumentName,
-  SUBPIX_INTERNAL_MIME,
   type DisplayProfileId,
   type Tool
 } from "@/format/subpixTypes";
@@ -155,6 +156,7 @@ export function App(): ReactElement {
   const [isGridMenuOpen, setIsGridMenuOpen] = useState(false);
   const [isRectangleMenuOpen, setIsRectangleMenuOpen] = useState(false);
   const [isEllipseMenuOpen, setIsEllipseMenuOpen] = useState(false);
+  const [isInspectorCollapsed, setIsInspectorCollapsed] = useState(false);
   const [statusMessage, setStatusMessage] = useState("Ready.");
   const [isNewDocumentDialogOpen, setIsNewDocumentDialogOpen] = useState(false);
   const [newDocumentDraft, setNewDocumentDraft] = useState<NewDocumentDraft>(DEFAULT_NEW_DOCUMENT_DRAFT);
@@ -695,7 +697,7 @@ export function App(): ReactElement {
   }
 
   return (
-    <div className="app-shell">
+    <div className={isInspectorCollapsed ? "app-shell app-shell--inspector-collapsed" : "app-shell"}>
       <header className="top-bar">
         <div className="brand-lockup" aria-label="Subpix">
           <div className="brand-mark" aria-hidden="true">
@@ -1188,165 +1190,120 @@ export function App(): ReactElement {
         />
       </main>
 
-      <aside className="right-panel">
-        <section className="panel-section panel-section--identity">
-          <div className="identity-card">
-            <div className="identity-card__mark" aria-hidden="true">
-              <span />
-              <span />
-              <span />
-            </div>
-            <div>
-              <h2>Subpixel Image</h2>
-              <p>{activeViewLabel}</p>
-            </div>
-          </div>
-        </section>
-
-        <section className="panel-section">
-          <h2>Document</h2>
-          <dl>
-            <div>
-              <dt>Name</dt>
-              <dd>{ensureSubpixFileName(suggestedBaseName)}</dd>
-            </div>
-            <div>
-              <dt>Real pixels</dt>
-              <dd>
-                {document.document.widthPixels} x {document.document.heightPixels}
-              </dd>
-            </div>
-            <div>
-              <dt>Subpixel cells</dt>
-              <dd>
-                {getWidthSubpixels(document)} x {getHeightSubpixels(document)}
-              </dd>
-            </div>
-            <div>
-              <dt>Active cells</dt>
-              <dd>
-                {documentStats.activeCells} / {documentStats.totalCells}
-              </dd>
-            </div>
-            <div>
-              <dt>Coverage</dt>
-              <dd>{documentStats.coverage.toFixed(1)}%</dd>
-            </div>
-            <div>
-              <dt>Format</dt>
-              <dd>{SUBPIX_INTERNAL_MIME}</dd>
-            </div>
-          </dl>
-        </section>
-
-        <section className="panel-section">
-          <h2>Architecture</h2>
-          <dl>
-            <div>
-              <dt>Geometry</dt>
-              <dd>{document.architecture.geometry}</dd>
-            </div>
-            <div>
-              <dt>Slots</dt>
-              <dd>{document.architecture.slotsPerPixel.join(" x ")}</dd>
-            </div>
-            <div>
-              <dt>Orders</dt>
-              <dd>{document.architecture.compatibleOrders.join(", ")}</dd>
-            </div>
-            <div>
-              <dt>Display</dt>
-              <dd>{getDisplayProfileLabel(displayProfile)}</dd>
-            </div>
-          </dl>
-        </section>
-
-        <section className={`panel-section export-readiness export-readiness--${exportReadiness.status}`}>
-          <div className="section-title-row">
-            <h2>Export</h2>
-            <span>{exportReadiness.statusLabel}</span>
-          </div>
-          <dl>
-            <div>
-              <dt>PNG size</dt>
-              <dd>
-                {exportReadiness.outputWidthPixels} x {exportReadiness.outputHeightPixels}
-              </dd>
-            </div>
-            <div>
-              <dt>Pixels</dt>
-              <dd>{exportReadiness.outputPixelCount.toLocaleString()}</dd>
-            </div>
-            <div>
-              <dt>RGBA bytes</dt>
-              <dd>{exportReadiness.outputByteCount.toLocaleString()}</dd>
-            </div>
-            <div>
-              <dt>Order</dt>
-              <dd>{exportReadiness.renderOrder}</dd>
-            </div>
-          </dl>
-          <div className="slot-map" aria-label="Export slot mapping">
-            {exportReadiness.slotMappings.map((mapping) => (
-              <span className={`slot-map__item slot-map__item--${mapping.channel.toLowerCase()}`} key={mapping.slot}>
-                S{mapping.slot} {"->"} {mapping.channel}
-              </span>
-            ))}
-          </div>
-          <p>{exportReadiness.message}</p>
-        </section>
-
-        <section className="panel-section">
-          <h2>Subpixel Signal</h2>
-          <div className="signal-stack" aria-label="Subpixel slot activity">
-            {documentStats.slotActivities.map((activity) => (
-              <div className="signal-row" key={activity.slot}>
-                <div className={`signal-channel signal-channel--${activity.channel.toLowerCase()}`}>
-                  {activity.channel}
+      <aside
+        className={isInspectorCollapsed ? "right-panel right-panel--collapsed" : "right-panel"}
+        aria-label="Inspector"
+      >
+        {isInspectorCollapsed ? (
+          <button
+            className="inspector-rail-button"
+            type="button"
+            title="Expand inspector"
+            aria-label="Expand inspector"
+            onClick={() => setIsInspectorCollapsed(false)}
+          >
+            <PanelRightOpen size={18} />
+            <span>Info</span>
+          </button>
+        ) : (
+          <>
+            <section className="panel-section panel-section--header">
+              <div className="panel-header">
+                <div>
+                  <h2>Inspector</h2>
+                  <p>{ensureSubpixFileName(suggestedBaseName)}</p>
                 </div>
-                <div className="signal-meter" aria-label={`${activity.channel} activity`}>
-                  <span style={{ width: `${getSignalWidthPercent(activity.normalizedIntensity)}%` }} />
-                </div>
-                <div className="signal-value">{activity.activeCells}</div>
+                <button
+                  className="icon-button"
+                  type="button"
+                  title="Collapse inspector"
+                  aria-label="Collapse inspector"
+                  onClick={() => setIsInspectorCollapsed(true)}
+                >
+                  <PanelRightClose size={17} />
+                </button>
               </div>
-            ))}
-          </div>
-        </section>
+            </section>
 
-        <section className="panel-section">
-          <h2>Workspace</h2>
-          <dl>
-            <div>
-              <dt>Tool</dt>
-              <dd>{TOOL_LABELS[tool]}</dd>
-            </div>
-            <div>
-              <dt>Mode</dt>
-              <dd>{activeViewLabel}</dd>
-            </div>
-            <div>
-              <dt>Zoom</dt>
-              <dd>{zoom}px</dd>
-            </div>
-            <div>
-              <dt>Grid</dt>
-              <dd>{showGrid ? "Shown" : "Hidden"}</dd>
-            </div>
-            <div>
-              <dt>Boundaries</dt>
-              <dd>{showPixelBoundaries ? "Shown" : "Hidden"}</dd>
-            </div>
-            <div>
-              <dt>Color</dt>
-              <dd>{ignoreColor ? "Ignored" : "Shown"}</dd>
-            </div>
-          </dl>
-        </section>
+            <section className="panel-section">
+              <h2>Document</h2>
+              <dl>
+                <div>
+                  <dt>Canvas</dt>
+                  <dd>
+                    {document.document.widthPixels} x {document.document.heightPixels}px
+                  </dd>
+                </div>
+                <div>
+                  <dt>Subpixels</dt>
+                  <dd>
+                    {getWidthSubpixels(document)} x {getHeightSubpixels(document)}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Active</dt>
+                  <dd>
+                    {documentStats.activeCells.toLocaleString()} cells ({documentStats.coverage.toFixed(1)}%)
+                  </dd>
+                </div>
+              </dl>
+            </section>
 
-        <section className={`compatibility compatibility--${packedAvailable ? "ok" : "bad"}`}>
-          <h2>{compatibilityLabel}</h2>
-          <p>{compatibilityMessage}</p>
-        </section>
+            <section className={`panel-section export-readiness export-readiness--${exportReadiness.status}`}>
+              <div className="section-title-row">
+                <h2>Display & Export</h2>
+                <span>{compatibilityLabel}</span>
+              </div>
+              <dl>
+                <div>
+                  <dt>Profile</dt>
+                  <dd>{getDisplayProfileLabel(displayProfile)}</dd>
+                </div>
+                <div>
+                  <dt>Layout</dt>
+                  <dd>
+                    horizontal {document.architecture.slotsPerPixel[0]} x {document.architecture.slotsPerPixel[1]} stripe
+                  </dd>
+                </div>
+                <div>
+                  <dt>PNG</dt>
+                  <dd>
+                    {exportReadiness.outputWidthPixels} x {exportReadiness.outputHeightPixels}px
+                  </dd>
+                </div>
+                <div>
+                  <dt>Order</dt>
+                  <dd>{exportReadiness.renderOrder}</dd>
+                </div>
+              </dl>
+              <div className="slot-map" aria-label="Export slot mapping">
+                {exportReadiness.slotMappings.map((mapping) => (
+                  <span className={`slot-map__item slot-map__item--${mapping.channel.toLowerCase()}`} key={mapping.slot}>
+                    S{mapping.slot} {"->"} {mapping.channel}
+                  </span>
+                ))}
+              </div>
+              <p>{compatibilityMessage}</p>
+            </section>
+
+            <section className="panel-section">
+              <h2>Signal</h2>
+              <div className="signal-stack" aria-label="Subpixel slot activity">
+                {documentStats.slotActivities.map((activity) => (
+                  <div className="signal-row" key={activity.slot}>
+                    <div className={`signal-channel signal-channel--${activity.channel.toLowerCase()}`}>
+                      {activity.channel}
+                    </div>
+                    <div className="signal-meter" aria-label={`${activity.channel} activity`}>
+                      <span style={{ width: `${getSignalWidthPercent(activity.normalizedIntensity)}%` }} />
+                    </div>
+                    <div className="signal-value">{activity.activeCells}</div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </>
+        )}
       </aside>
 
       {isNewDocumentDialogOpen ? (
