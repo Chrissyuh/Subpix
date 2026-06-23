@@ -11,7 +11,6 @@ import {
   Minus,
   Redo2,
   Square,
-  Sparkles,
   Trash2,
   Undo2,
   X,
@@ -27,7 +26,7 @@ import { getSubpixDocumentStats } from "@/format/documentStats";
 import { getExportReadiness } from "@/format/exportReadiness";
 import { createPackedPngBytes, getCompositeSubpixelIntensities } from "@/format/exportPng";
 import { loadSubpix, SubpixLoadError } from "@/format/loadSubpix";
-import { getSubpixPattern, SUBPIX_PATTERNS, type SubpixPatternId } from "@/format/patterns";
+import { getSubpixPattern, type SubpixPatternId } from "@/format/patterns";
 import { saveSubpix } from "@/format/saveSubpix";
 import {
   MAX_ZOOM,
@@ -160,13 +159,11 @@ export function App(): ReactElement {
   const [isNewDocumentDialogOpen, setIsNewDocumentDialogOpen] = useState(false);
   const [newDocumentDraft, setNewDocumentDraft] = useState<NewDocumentDraft>(DEFAULT_NEW_DOCUMENT_DRAFT);
   const [newDocumentError, setNewDocumentError] = useState<string | null>(null);
-  const [selectedPattern, setSelectedPattern] = useState<SubpixPatternId>(SUBPIX_PATTERNS[0].id);
 
   const document = state.currentDocument;
   const packedAvailable = canUsePackedPreview(document, displayProfile);
   const renderOrder = getRenderOrder(document, displayProfile);
   const compatibilityMessage = getCompatibilityMessage(document, displayProfile);
-  const selectedPatternDefinition = getSubpixPattern(selectedPattern);
   const suggestedBaseName = baseNameFromPath(state.filePath) || document.document.name || "Untitled";
   const fileLabel = ensureSubpixFileName(suggestedBaseName);
   const documentStats = useMemo(() => getSubpixDocumentStats(document, renderOrder), [document, renderOrder]);
@@ -549,10 +546,9 @@ export function App(): ReactElement {
     return !state.isDirty || window.confirm("Discard unsaved changes?");
   }
 
-  function insertPattern(patternId: SubpixPatternId = selectedPattern): void {
+  function insertPattern(patternId: SubpixPatternId): void {
     const pattern = getSubpixPattern(patternId);
     actions.insertPattern(pattern.id);
-    setSelectedPattern(pattern.id);
     setStatusMessage(`Inserted ${pattern.label}.`);
   }
 
@@ -1314,30 +1310,6 @@ export function App(): ReactElement {
                 <div className="signal-value">{activity.activeCells}</div>
               </div>
             ))}
-          </div>
-        </section>
-
-        <section className="panel-section">
-          <h2>Patterns</h2>
-          <div className="pattern-controls">
-            <label className="input-field">
-              <span>Preset</span>
-              <select
-                value={selectedPattern}
-                onChange={(event) => setSelectedPattern(event.target.value as SubpixPatternId)}
-              >
-                {SUBPIX_PATTERNS.map((pattern) => (
-                  <option key={pattern.id} value={pattern.id}>
-                    {pattern.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <p>{selectedPatternDefinition.summary}</p>
-            <button className="command-button command-button--wide" type="button" onClick={() => insertPattern()}>
-              <Sparkles size={16} />
-              Insert Pattern
-            </button>
           </div>
         </section>
 

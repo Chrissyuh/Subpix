@@ -736,18 +736,6 @@ dd {
   text-align: right;
 }
 
-.pattern-controls {
-  display: grid;
-  gap: 10px;
-}
-
-.pattern-controls p {
-  margin: 0;
-  color: #b9b9b9;
-  font-size: 12px;
-  line-height: 1.45;
-}
-
 .modal-backdrop {
   position: fixed;
   inset: 0;
