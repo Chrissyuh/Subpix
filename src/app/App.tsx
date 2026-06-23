@@ -271,6 +271,9 @@ export function App(): ReactElement {
         } else if (key === "n") {
           event.preventDefault();
           handleNew();
+        } else if (key === "backspace") {
+          event.preventDefault();
+          handleClearCanvas();
         }
 
         return;
@@ -482,7 +485,7 @@ export function App(): ReactElement {
         actions.redo();
         break;
       case "clear":
-        actions.clearCanvas();
+        handleClearCanvas();
         break;
       case "insert-calibration-bars":
         insertPattern("calibration-bars");
@@ -546,6 +549,21 @@ export function App(): ReactElement {
 
   function confirmDiscardDirty(): boolean {
     return !state.isDirty || window.confirm("Discard unsaved changes?");
+  }
+
+  function handleClearCanvas(): void {
+    if (documentStats.activeCells === 0) {
+      setStatusMessage("Canvas is already empty.");
+      return;
+    }
+
+    if (!window.confirm("Clear the canvas? This will erase all active subpixels.")) {
+      setStatusMessage("Clear canvas canceled.");
+      return;
+    }
+
+    actions.clearCanvas();
+    setStatusMessage("Canvas cleared.");
   }
 
   function insertPattern(patternId: SubpixPatternId): void {
@@ -798,7 +816,7 @@ export function App(): ReactElement {
                   Delete
                 </MenuItem>
                 <MenuSeparator />
-                <MenuItem shortcut="Ctrl+Backspace" onClick={() => runMenuAction(actions.clearCanvas)}>
+                <MenuItem shortcut="Ctrl+Backspace" onClick={() => runMenuAction(handleClearCanvas)}>
                   Clear Canvas
                 </MenuItem>
                 <MenuItem disabled shortcut="Ctrl+A">
@@ -882,7 +900,7 @@ export function App(): ReactElement {
                 <MenuItem disabled>Resize Canvas...</MenuItem>
                 <MenuItem disabled>Trim To Drawing</MenuItem>
                 <MenuSeparator />
-                <MenuItem shortcut="Ctrl+Backspace" onClick={() => runMenuAction(actions.clearCanvas)}>
+                <MenuItem shortcut="Ctrl+Backspace" onClick={() => runMenuAction(handleClearCanvas)}>
                   Clear Canvas
                 </MenuItem>
                 <MenuSeparator />
@@ -1136,7 +1154,7 @@ export function App(): ReactElement {
             </div>
           ) : null}
         </div>
-        <button className="tool-button" title="Clear canvas" onClick={actions.clearCanvas}>
+        <button className="tool-button" title="Clear canvas" onClick={handleClearCanvas}>
           <Trash2 size={20} />
         </button>
         <div className="toolbar-divider" />
