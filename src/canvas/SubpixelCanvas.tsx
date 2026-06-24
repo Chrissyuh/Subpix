@@ -23,14 +23,6 @@ interface DragState {
   tool: Tool;
 }
 
-export interface WheelZoomAnchor {
-  canvasX: number;
-  canvasY: number;
-  clientX: number;
-  clientY: number;
-  direction: 1 | -1;
-}
-
 export interface SubpixelCanvasProps {
   document: SubpixDocument;
   order: SubpixOrder;
@@ -42,7 +34,6 @@ export interface SubpixelCanvasProps {
   onBeginStroke: () => void;
   onPaintCells: (cells: CellPoint[], intensity: number) => void;
   onEndStroke: () => void;
-  onWheelZoom: (anchor: WheelZoomAnchor) => void;
 }
 
 function getCanvasMetrics(document: SubpixDocument, zoom: number): CanvasMetrics {
@@ -194,8 +185,7 @@ export function SubpixelCanvas({
   showPixelBoundaries,
   onBeginStroke,
   onPaintCells,
-  onEndStroke,
-  onWheelZoom
+  onEndStroke
 }: SubpixelCanvasProps): ReactElement {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawingRef = useRef(false);
@@ -239,30 +229,6 @@ export function SubpixelCanvas({
       drawDragPreview(ctx, dragState, metrics);
     }
   }, [document, dragState, ignoreColor, metrics, order, showGrid, showPixelBoundaries, zoom]);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) {
-      return;
-    }
-
-    const targetCanvas = canvas;
-
-    function handleWheel(event: WheelEvent): void {
-      event.preventDefault();
-      const rect = targetCanvas.getBoundingClientRect();
-      onWheelZoom({
-        canvasX: event.clientX - rect.left,
-        canvasY: event.clientY - rect.top,
-        clientX: event.clientX,
-        clientY: event.clientY,
-        direction: event.deltaY < 0 ? 1 : -1
-      });
-    }
-
-    targetCanvas.addEventListener("wheel", handleWheel, { passive: false });
-    return () => targetCanvas.removeEventListener("wheel", handleWheel);
-  }, [onWheelZoom]);
 
   function getCellFromPointer(event: React.PointerEvent<HTMLCanvasElement>): { x: number; y: number } | null {
     const rect = event.currentTarget.getBoundingClientRect();

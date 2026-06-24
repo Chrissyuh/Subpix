@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactElement, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type ReactElement, type ReactNode } from "react";
 import {
   Brush,
   Check,
@@ -20,7 +20,6 @@ import {
   ZoomOut
 } from "lucide-react";
 import { SubpixelCanvas } from "@/canvas/SubpixelCanvas";
-import type { WheelZoomAnchor } from "@/canvas/SubpixelCanvas";
 import { getDesktopApi } from "@/app/desktopApi";
 import type { DesktopAppCommand } from "@/app/desktopApiTypes";
 import { getCursorAnchoredScroll } from "@/app/zoomMath";
@@ -125,6 +124,14 @@ interface AppDialogState {
   variant: "confirm" | "info";
 }
 
+interface WheelZoomAnchor {
+  canvasX: number;
+  canvasY: number;
+  clientX: number;
+  clientY: number;
+  direction: 1 | -1;
+}
+
 function formatError(error: unknown): string {
   if (error instanceof SubpixLoadError) {
     return error.errors.join(" ");
@@ -155,6 +162,7 @@ export function App(): ReactElement {
   const initialPreferences = useMemo(() => readAppPreferences(), []);
   const isDirtyRef = useRef(state.isDirty);
   const workspaceRef = useRef<HTMLElement | null>(null);
+  const pendingWheelZoomScrollRef = useRef<{ scrollLeft: number; scrollTop: number } | null>(null);
   const [tool, setTool] = useState<Tool>(initialPreferences.tool);
   const [displayProfile, setDisplayProfile] = useState<DisplayProfileId>(initialPreferences.displayProfile);
   const [zoom, setZoom] = useState(initialPreferences.zoom);
@@ -196,6 +204,32 @@ export function App(): ReactElement {
   useEffect(() => {
     window.document.title = windowTitle;
   }, [windowTitle]);
+
+  useLayoutEffect(() => {
+    const workspace = workspaceRef.current;
+    const pendingScroll = pendingWheelZoomScrollRef.current;
+    if (!workspace || !pendingScroll) {
+      return;
+    }
+
+    workspace.scrollLeft = pendingScroll.scrollLeft;
+    workspace.scrollTop = pendingScroll.scrollTop;
+    pendingWheelZoomScrollRef.current = null;
+  }, [zoom]);
+
+  useEffect(() => {
+    const workspace = workspaceRef.current;
+    if (!workspace) {
+      return;
+    }
+
+    function handleWheel(event: WheelEvent): void {
+      handleWorkspaceWheel(event);
+    }
+
+    workspace.addEventListener("wheel", handleWheel, { passive: false });
+    return () => workspace.removeEventListener("wheel", handleWheel);
+  }, [zoom]);
 
   useEffect(() => {
     const desktopApi = getDesktopApi();
@@ -791,14 +825,29 @@ export function App(): ReactElement {
       setZoom(nextZoom);
 
       if (workspace && nextScroll) {
-        window.requestAnimationFrame(() => {
-          workspace.scrollLeft = nextScroll.scrollLeft;
-          workspace.scrollTop = nextScroll.scrollTop;
-        });
+        pendingWheelZoomScrollRef.current = nextScroll;
       }
 
       setStatusMessage(`Zoom set to ${nextZoom}px.`);
     }
+  }
+
+  function handleWorkspaceWheel(event: WheelEvent): void {
+    const canvas = workspaceRef.current?.querySelector(".subpixel-canvas");
+    if (!(canvas instanceof HTMLCanvasElement)) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const canvasRect = canvas.getBoundingClientRect();
+    adjustZoomByWheel({
+      canvasX: event.clientX - canvasRect.left,
+      canvasY: event.clientY - canvasRect.top,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      direction: event.deltaY < 0 ? 1 : -1
+    });
   }
 
   return (
@@ -1231,7 +1280,6 @@ export function App(): ReactElement {
           onBeginStroke={actions.beginStroke}
           onPaintCells={actions.paintCells}
           onEndStroke={actions.endStroke}
-          onWheelZoom={adjustZoomByWheel}
         />
       </main>
 
