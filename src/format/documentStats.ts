@@ -40,24 +40,47 @@ export function getSubpixDocumentStats(document: SubpixDocument, order: SubpixOr
   const totalCells = getExpectedDataLength(document);
   const composite = getCompositeSubpixelIntensities(document);
   const slotCells = document.document.widthPixels * document.document.heightPixels;
-  const slotActivities: SlotActivity[] = [0, 1, 2].map((slot) => ({
-    activeCells: 0,
-    averageIntensity: 0,
-    channel: channelLabelForSlot(slot, order),
-    coverage: 0,
-    maxIntensity: 0,
-    normalizedIntensity: 0,
-    slot: slot as 0 | 1 | 2,
-    totalCells: slotCells,
-    totalIntensity: 0
-  }));
+  const slotActivities: SlotActivity[] = [
+    {
+      activeCells: 0,
+      averageIntensity: 0,
+      channel: channelLabelForSlot(0, order),
+      coverage: 0,
+      maxIntensity: 0,
+      normalizedIntensity: 0,
+      slot: 0,
+      totalCells: slotCells,
+      totalIntensity: 0
+    },
+    {
+      activeCells: 0,
+      averageIntensity: 0,
+      channel: channelLabelForSlot(1, order),
+      coverage: 0,
+      maxIntensity: 0,
+      normalizedIntensity: 0,
+      slot: 1,
+      totalCells: slotCells,
+      totalIntensity: 0
+    },
+    {
+      activeCells: 0,
+      averageIntensity: 0,
+      channel: channelLabelForSlot(2, order),
+      coverage: 0,
+      maxIntensity: 0,
+      normalizedIntensity: 0,
+      slot: 2,
+      totalCells: slotCells,
+      totalIntensity: 0
+    }
+  ];
 
   let activeCells = 0;
 
   for (let index = 0; index < totalCells; index += 1) {
     const intensity = composite[index] ?? 0;
-    const x = index % widthSubpixels;
-    const slot = x % 3;
+    const slot = index % 3;
     const activity = slotActivities[slot];
 
     activity.totalIntensity += intensity;

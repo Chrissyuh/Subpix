@@ -9,6 +9,10 @@ export function clampIntensity(value: number): number {
   return Math.max(0, Math.min(255, Math.round(value)));
 }
 
+function clampOpacity(value: number): number {
+  return Math.max(0, Math.min(1, value));
+}
+
 export function getCompositeSubpixelIntensities(document: SubpixDocument): Uint8ClampedArray {
   const expectedLength = getExpectedDataLength(document);
   const composite = new Float32Array(expectedLength);
@@ -18,22 +22,38 @@ export function getCompositeSubpixelIntensities(document: SubpixDocument): Uint8
       continue;
     }
 
-    const opacity = Math.max(0, Math.min(1, layer.opacity));
+    const opacity = clampOpacity(layer.opacity);
+    if (opacity === 0) {
+      continue;
+    }
+
+    if (opacity === 1) {
+      for (let index = 0; index < expectedLength; index += 1) {
+        composite[index] = clampIntensity(layer.data[index] ?? 0);
+      }
+      continue;
+    }
+
     for (let index = 0; index < expectedLength; index += 1) {
       const nextValue = clampIntensity(layer.data[index] ?? 0);
       composite[index] = composite[index] * (1 - opacity) + nextValue * opacity;
     }
   }
 
-  return Uint8ClampedArray.from(composite, clampIntensity);
+  const output = new Uint8ClampedArray(expectedLength);
+  for (let index = 0; index < expectedLength; index += 1) {
+    output[index] = clampIntensity(composite[index]);
+  }
+
+  return output;
 }
 
 export function channelIndexForSlot(slot: number, order: SubpixOrder): number {
   if (order === "BGR") {
-    return [2, 1, 0][slot] ?? 0;
+    return slot === 0 ? 2 : slot === 1 ? 1 : 0;
   }
 
-  return [0, 1, 2][slot] ?? 0;
+  return slot === 0 ? 0 : slot === 1 ? 1 : 2;
 }
 
 export function packSubpixToRgba(document: SubpixDocument, order: SubpixOrder): Uint8ClampedArray {
@@ -41,16 +61,20 @@ export function packSubpixToRgba(document: SubpixDocument, order: SubpixOrder): 
   const widthSubpixels = getWidthSubpixels(document);
   const composite = getCompositeSubpixelIntensities(document);
   const rgba = new Uint8ClampedArray(widthPixels * heightPixels * 4);
+  const slot0Channel = channelIndexForSlot(0, order);
+  const slot1Channel = channelIndexForSlot(1, order);
+  const slot2Channel = channelIndexForSlot(2, order);
 
   for (let y = 0; y < heightPixels; y += 1) {
+    const subpixelRow = y * widthSubpixels;
+    const pixelRow = y * widthPixels;
     for (let x = 0; x < widthPixels; x += 1) {
-      const pixelBase = (y * widthPixels + x) * 4;
+      const pixelBase = (pixelRow + x) * 4;
+      const subpixelBase = subpixelRow + x * 3;
+      rgba[pixelBase + slot0Channel] = composite[subpixelBase] ?? 0;
+      rgba[pixelBase + slot1Channel] = composite[subpixelBase + 1] ?? 0;
+      rgba[pixelBase + slot2Channel] = composite[subpixelBase + 2] ?? 0;
       rgba[pixelBase + 3] = 255;
-
-      for (let slot = 0; slot < 3; slot += 1) {
-        const subpixelIndex = y * widthSubpixels + x * 3 + slot;
-        rgba[pixelBase + channelIndexForSlot(slot, order)] = composite[subpixelIndex] ?? 0;
-      }
     }
   }
 

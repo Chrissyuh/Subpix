@@ -163,6 +163,10 @@ export function App(): ReactElement {
   const isDirtyRef = useRef(state.isDirty);
   const workspaceRef = useRef<HTMLElement | null>(null);
   const pendingWheelZoomScrollRef = useRef<{ scrollLeft: number; scrollTop: number } | null>(null);
+  const appCommandHandlerRef = useRef<(command: DesktopAppCommand) => void>(() => undefined);
+  const keyDownHandlerRef = useRef<(event: KeyboardEvent) => void>(() => undefined);
+  const wheelHandlerRef = useRef<(event: WheelEvent) => void>(() => undefined);
+  const zoomRef = useRef(initialPreferences.zoom);
   const [tool, setTool] = useState<Tool>(initialPreferences.tool);
   const [displayProfile, setDisplayProfile] = useState<DisplayProfileId>(initialPreferences.displayProfile);
   const [zoom, setZoom] = useState(initialPreferences.zoom);
@@ -198,6 +202,10 @@ export function App(): ReactElement {
   }, [state.isDirty]);
 
   useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
+
+  useEffect(() => {
     appDialogRef.current = appDialog;
   }, [appDialog]);
 
@@ -224,12 +232,12 @@ export function App(): ReactElement {
     }
 
     function handleWheel(event: WheelEvent): void {
-      handleWorkspaceWheel(event);
+      wheelHandlerRef.current(event);
     }
 
     workspace.addEventListener("wheel", handleWheel, { passive: false });
     return () => workspace.removeEventListener("wheel", handleWheel);
-  }, [zoom]);
+  }, []);
 
   useEffect(() => {
     const desktopApi = getDesktopApi();
@@ -297,114 +305,17 @@ export function App(): ReactElement {
   }, [actions]);
 
   useEffect(() => {
-    return getDesktopApi().onAppCommand((command) => {
-      handleAppCommand(command);
-    });
-  });
+    return getDesktopApi().onAppCommand((command) => appCommandHandlerRef.current(command));
+  }, []);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent): void {
-      const key = event.key.toLowerCase();
-      const commandKey = event.ctrlKey || event.metaKey;
-      const editableTarget = isEditableKeyboardTarget(event.target);
-
-      if (key === "escape") {
-        if (appDialogRef.current) {
-          event.preventDefault();
-          closeAppDialog(false);
-          return;
-        }
-
-        if (isNewDocumentDialogOpen) {
-          event.preventDefault();
-          setIsNewDocumentDialogOpen(false);
-          return;
-        }
-      }
-
-      if (commandKey) {
-        if (editableTarget && key !== "s") {
-          return;
-        }
-
-        if (key === "z" && !event.shiftKey) {
-          event.preventDefault();
-          actions.undo();
-        } else if (key === "y" || (key === "z" && event.shiftKey)) {
-          event.preventDefault();
-          actions.redo();
-        } else if (key === "s") {
-          event.preventDefault();
-          void handleSave(event.shiftKey);
-        } else if (key === "e" && event.shiftKey) {
-          event.preventDefault();
-          void handleExportPng();
-        } else if (key === "o") {
-          event.preventDefault();
-          void handleOpen();
-        } else if (key === "n") {
-          event.preventDefault();
-          void handleNew();
-        } else if (key === "backspace") {
-          event.preventDefault();
-          void handleClearCanvas();
-        }
-
-        return;
-      }
-
-      if (event.altKey || editableTarget) {
-        return;
-      }
-
-      if (key === "b") {
-        event.preventDefault();
-        selectTool("brush");
-      } else if (key === "e") {
-        event.preventDefault();
-        selectTool("eraser");
-      } else if (key === "x") {
-        event.preventDefault();
-        selectTool("box-eraser");
-      } else if (key === "l") {
-        event.preventDefault();
-        selectTool("line");
-      } else if (key === "r") {
-        event.preventDefault();
-        selectTool("rect-outline");
-      } else if (key === "f") {
-        event.preventDefault();
-        selectTool("rect-fill");
-      } else if (key === "o") {
-        event.preventDefault();
-        selectTool("ellipse-outline");
-      } else if (key === "i") {
-        event.preventDefault();
-        selectTool("ellipse-fill");
-      } else if (key === "g") {
-        event.preventDefault();
-        toggleGrid();
-      } else if (key === "p") {
-        event.preventDefault();
-        togglePixelBoundaries();
-      } else if (key === "c") {
-        event.preventDefault();
-        toggleIgnoreColor();
-      } else if (key === "=" || key === "+") {
-        event.preventDefault();
-        adjustZoom(zoom + ZOOM_STEP);
-      } else if (key === "-") {
-        event.preventDefault();
-        adjustZoom(zoom - ZOOM_STEP);
-      } else if (key === "0") {
-        event.preventDefault();
-        zoomToDrawing();
-      }
+      keyDownHandlerRef.current(event);
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  });
+  }, []);
 
   const compatibilityLabel = useMemo(() => {
     if (!packedAvailable) {
@@ -654,6 +565,105 @@ export function App(): ReactElement {
     }
   }
 
+  function handleGlobalKeyDown(event: KeyboardEvent): void {
+    const key = event.key.toLowerCase();
+    const commandKey = event.ctrlKey || event.metaKey;
+    const editableTarget = isEditableKeyboardTarget(event.target);
+
+    if (key === "escape") {
+      if (appDialogRef.current) {
+        event.preventDefault();
+        closeAppDialog(false);
+        return;
+      }
+
+      if (isNewDocumentDialogOpen) {
+        event.preventDefault();
+        setIsNewDocumentDialogOpen(false);
+        return;
+      }
+    }
+
+    if (commandKey) {
+      if (editableTarget && key !== "s") {
+        return;
+      }
+
+      if (key === "z" && !event.shiftKey) {
+        event.preventDefault();
+        actions.undo();
+      } else if (key === "y" || (key === "z" && event.shiftKey)) {
+        event.preventDefault();
+        actions.redo();
+      } else if (key === "s") {
+        event.preventDefault();
+        void handleSave(event.shiftKey);
+      } else if (key === "e" && event.shiftKey) {
+        event.preventDefault();
+        void handleExportPng();
+      } else if (key === "o") {
+        event.preventDefault();
+        void handleOpen();
+      } else if (key === "n") {
+        event.preventDefault();
+        void handleNew();
+      } else if (key === "backspace") {
+        event.preventDefault();
+        void handleClearCanvas();
+      }
+
+      return;
+    }
+
+    if (event.altKey || editableTarget) {
+      return;
+    }
+
+    if (key === "b") {
+      event.preventDefault();
+      selectTool("brush");
+    } else if (key === "e") {
+      event.preventDefault();
+      selectTool("eraser");
+    } else if (key === "x") {
+      event.preventDefault();
+      selectTool("box-eraser");
+    } else if (key === "l") {
+      event.preventDefault();
+      selectTool("line");
+    } else if (key === "r") {
+      event.preventDefault();
+      selectTool("rect-outline");
+    } else if (key === "f") {
+      event.preventDefault();
+      selectTool("rect-fill");
+    } else if (key === "o") {
+      event.preventDefault();
+      selectTool("ellipse-outline");
+    } else if (key === "i") {
+      event.preventDefault();
+      selectTool("ellipse-fill");
+    } else if (key === "g") {
+      event.preventDefault();
+      toggleGrid();
+    } else if (key === "p") {
+      event.preventDefault();
+      togglePixelBoundaries();
+    } else if (key === "c") {
+      event.preventDefault();
+      toggleIgnoreColor();
+    } else if (key === "=" || key === "+") {
+      event.preventDefault();
+      adjustZoom(zoomRef.current + ZOOM_STEP);
+    } else if (key === "-") {
+      event.preventDefault();
+      adjustZoom(zoomRef.current - ZOOM_STEP);
+    } else if (key === "0") {
+      event.preventDefault();
+      zoomToDrawing();
+    }
+  }
+
   function confirmDiscardDirty(message = "Discard unsaved changes?"): Promise<boolean> {
     if (!isDirtyRef.current) {
       return Promise.resolve(true);
@@ -798,14 +808,16 @@ export function App(): ReactElement {
 
   function adjustZoom(nextZoom: number): void {
     const clampedZoom = clampZoom(nextZoom);
+    zoomRef.current = clampedZoom;
     setZoom(clampedZoom);
     setStatusMessage(`Zoom set to ${clampedZoom}px.`);
   }
 
   function adjustZoomByWheel(anchor: WheelZoomAnchor): void {
     const workspace = workspaceRef.current;
-    const nextZoom = clampZoom(zoom + anchor.direction * ZOOM_STEP);
-    if (nextZoom !== zoom) {
+    const currentZoom = zoomRef.current;
+    const nextZoom = clampZoom(currentZoom + anchor.direction * ZOOM_STEP);
+    if (nextZoom !== currentZoom) {
       const workspaceRect = workspace?.getBoundingClientRect();
       const nextScroll =
         workspace && workspaceRect
@@ -817,11 +829,12 @@ export function App(): ReactElement {
                 scrollLeft: workspace.scrollLeft,
                 scrollTop: workspace.scrollTop
               },
-              zoom,
+              currentZoom,
               nextZoom
             )
           : null;
 
+      zoomRef.current = nextZoom;
       setZoom(nextZoom);
 
       if (workspace && nextScroll) {
@@ -849,6 +862,10 @@ export function App(): ReactElement {
       direction: event.deltaY < 0 ? 1 : -1
     });
   }
+
+  appCommandHandlerRef.current = handleAppCommand;
+  keyDownHandlerRef.current = handleGlobalKeyDown;
+  wheelHandlerRef.current = handleWorkspaceWheel;
 
   return (
     <div className={isInspectorCollapsed ? "app-shell app-shell--inspector-collapsed" : "app-shell"}>

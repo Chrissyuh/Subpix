@@ -13,14 +13,34 @@ export function clearCanvas(ctx: CanvasRenderingContext2D, width: number, height
   ctx.fillRect(0, 0, width, height);
 }
 
+const COLOR_CACHE: Record<SubpixOrder, string[][]> = {
+  RGB: [[], [], []],
+  BGR: [[], [], []]
+};
+
+const GRAY_COLOR_CACHE: string[] = [];
+
+function normalizedIntensity(value: number): number {
+  return Math.max(0, Math.min(255, Math.round(value)));
+}
+
 export function colorForSlot(slot: number, order: SubpixOrder, intensity: number, ignoreColor = false): string {
+  const value = normalizedIntensity(intensity);
+
   if (ignoreColor) {
-    return `rgb(${intensity} ${intensity} ${intensity})`;
+    GRAY_COLOR_CACHE[value] ??= `rgb(${value} ${value} ${value})`;
+    return GRAY_COLOR_CACHE[value];
   }
 
-  const channels = [0, 0, 0];
-  channels[channelIndexForSlot(slot, order)] = intensity;
-  return `rgb(${channels[0]} ${channels[1]} ${channels[2]})`;
+  const slotColorCache = COLOR_CACHE[order][slot] ?? COLOR_CACHE[order][0];
+  const channelIndex = channelIndexForSlot(slot, order);
+  slotColorCache[value] ??= channelIndex === 0
+    ? `rgb(${value} 0 0)`
+    : channelIndex === 1
+      ? `rgb(0 ${value} 0)`
+      : `rgb(0 0 ${value})`;
+
+  return slotColorCache[value];
 }
 
 export function drawGrid(

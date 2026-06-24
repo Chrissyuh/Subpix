@@ -21,11 +21,18 @@ export function renderSimulatedView(
 
   clearCanvas(ctx, width, height);
 
+  let lastFillStyle = "";
   for (let y = 0; y < heightPixels; y += 1) {
+    const rowOffset = y * widthSubpixels;
+    const cellY = y * options.pixelHeight;
     for (let x = 0; x < widthSubpixels; x += 1) {
-      const intensity = composite[y * widthSubpixels + x] ?? 0;
-      ctx.fillStyle = colorForSlot(x % 3, options.order, intensity, options.ignoreColor);
-      ctx.fillRect(x * options.subpixelWidth, y * options.pixelHeight, options.subpixelWidth, options.pixelHeight);
+      const intensity = composite[rowOffset + x] ?? 0;
+      const fillStyle = colorForSlot(x % 3, options.order, intensity, options.ignoreColor);
+      if (fillStyle !== lastFillStyle) {
+        ctx.fillStyle = fillStyle;
+        lastFillStyle = fillStyle;
+      }
+      ctx.fillRect(x * options.subpixelWidth, cellY, options.subpixelWidth, options.pixelHeight);
     }
   }
 
