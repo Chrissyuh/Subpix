@@ -61,8 +61,8 @@ import { useDocumentStore } from "@/state/documentStore";
 import { baseNameFromPath, ensurePngFileName, ensureSubpixFileName } from "@/utils/fileNames";
 
 const TOOL_LABELS: Record<Tool, string> = {
-  brush: "Brush",
-  eraser: "Cell Eraser",
+  brush: "Draw On",
+  eraser: "Erase Off",
   "box-eraser": "Box Eraser",
   line: "Line",
   "rect-outline": "Rectangle",
@@ -116,6 +116,15 @@ const DEFAULT_NEW_DOCUMENT_DRAFT: NewDocumentDraft = {
   heightPixels: String(DEFAULT_HEIGHT_PIXELS)
 };
 
+interface AppDialogState {
+  cancelLabel?: string;
+  confirmLabel: string;
+  message: string;
+  resolve: (confirmed: boolean) => void;
+  title: string;
+  variant: "confirm" | "info";
+}
+
 function formatError(error: unknown): string {
   if (error instanceof SubpixLoadError) {
     return error.errors.join(" ");
@@ -161,6 +170,8 @@ export function App(): ReactElement {
   const [isNewDocumentDialogOpen, setIsNewDocumentDialogOpen] = useState(false);
   const [newDocumentDraft, setNewDocumentDraft] = useState<NewDocumentDraft>(DEFAULT_NEW_DOCUMENT_DRAFT);
   const [newDocumentError, setNewDocumentError] = useState<string | null>(null);
+  const [appDialog, setAppDialog] = useState<AppDialogState | null>(null);
+  const appDialogRef = useRef<AppDialogState | null>(null);
 
   const document = state.currentDocument;
   const packedAvailable = canUsePackedPreview(document, displayProfile);
@@ -179,18 +190,24 @@ export function App(): ReactElement {
   }, [state.isDirty]);
 
   useEffect(() => {
+    appDialogRef.current = appDialog;
+  }, [appDialog]);
+
+  useEffect(() => {
     window.document.title = windowTitle;
   }, [windowTitle]);
 
   useEffect(() => {
     const desktopApi = getDesktopApi();
     return desktopApi.onCloseRequest(() => {
-      const allowClose = !isDirtyRef.current || window.confirm("Discard unsaved changes and close Subpix?");
-      if (!allowClose) {
-        setStatusMessage("Close canceled.");
-      }
+      void (async () => {
+        const allowClose = await confirmDiscardDirty("Close Subpix and discard unsaved changes?");
+        if (!allowClose) {
+          setStatusMessage("Close canceled.");
+        }
 
-      desktopApi.confirmClose(allowClose);
+        desktopApi.confirmClose(allowClose);
+      })();
     });
   }, []);
 
@@ -209,12 +226,12 @@ export function App(): ReactElement {
     let disposed = false;
     const desktopApi = getDesktopApi();
 
-    function openDesktopDocument(result: Awaited<ReturnType<typeof desktopApi.openSubpix>>): void {
+    async function openDesktopDocument(result: Awaited<ReturnType<typeof desktopApi.openSubpix>>): Promise<void> {
       if (!result || disposed) {
         return;
       }
 
-      if (isDirtyRef.current && !window.confirm("Discard unsaved changes?")) {
+      if (!(await confirmDiscardDirty("Open this file and discard unsaved changes?"))) {
         return;
       }
 
@@ -227,13 +244,17 @@ export function App(): ReactElement {
       }
     }
 
-    void desktopApi.getLaunchSubpixFile().then(openDesktopDocument).catch((error: unknown) => {
+    void desktopApi.getLaunchSubpixFile().then((result) => {
+      void openDesktopDocument(result);
+    }).catch((error: unknown) => {
       if (!disposed) {
         setStatusMessage(`Open failed: ${formatError(error)}`);
       }
     });
 
-    const unsubscribe = desktopApi.onOpenSubpixFile(openDesktopDocument);
+    const unsubscribe = desktopApi.onOpenSubpixFile((result) => {
+      void openDesktopDocument(result);
+    });
 
     return () => {
       disposed = true;
@@ -254,6 +275,12 @@ export function App(): ReactElement {
       const editableTarget = isEditableKeyboardTarget(event.target);
 
       if (key === "escape") {
+        if (appDialogRef.current) {
+          event.preventDefault();
+          closeAppDialog(false);
+          return;
+        }
+
         if (isNewDocumentDialogOpen) {
           event.preventDefault();
           setIsNewDocumentDialogOpen(false);
@@ -283,10 +310,10 @@ export function App(): ReactElement {
           void handleOpen();
         } else if (key === "n") {
           event.preventDefault();
-          handleNew();
+          void handleNew();
         } else if (key === "backspace") {
           event.preventDefault();
-          handleClearCanvas();
+          void handleClearCanvas();
         }
 
         return;
@@ -383,8 +410,41 @@ export function App(): ReactElement {
     void action();
   }
 
+  function openAppDialog(options: Omit<AppDialogState, "resolve">): Promise<boolean> {
+    return new Promise((resolve) => {
+      setAppDialog({ ...options, resolve });
+    });
+  }
+
+  function closeAppDialog(confirmed: boolean): void {
+    setAppDialog((dialog) => {
+      dialog?.resolve(confirmed);
+      return null;
+    });
+  }
+
+  function showConfirmDialog(options: {
+    cancelLabel?: string;
+    confirmLabel: string;
+    message: string;
+    title: string;
+  }): Promise<boolean> {
+    return openAppDialog({
+      cancelLabel: options.cancelLabel ?? "Cancel",
+      confirmLabel: options.confirmLabel,
+      message: options.message,
+      title: options.title,
+      variant: "confirm"
+    });
+  }
+
   function showAbout(): void {
-    window.alert("Subpix\n\nSubpixel Image Studio for logical RGB/BGR horizontal stripe artwork and .subpix files.");
+    void openAppDialog({
+      confirmLabel: "Close",
+      message: "Subpixel Image Studio for logical RGB/BGR horizontal stripe artwork and .subpix files.",
+      title: "About Subpix",
+      variant: "info"
+    });
     setStatusMessage("Subpix edits logical horizontal stripe subpixel images.");
   }
 
@@ -477,7 +537,7 @@ export function App(): ReactElement {
   function handleAppCommand(command: DesktopAppCommand): void {
     switch (command) {
       case "new":
-        handleNew();
+        void handleNew();
         break;
       case "open":
         void handleOpen();
@@ -498,7 +558,7 @@ export function App(): ReactElement {
         actions.redo();
         break;
       case "clear":
-        handleClearCanvas();
+        void handleClearCanvas();
         break;
       case "insert-calibration-bars":
         insertPattern("calibration-bars");
@@ -560,17 +620,31 @@ export function App(): ReactElement {
     }
   }
 
-  function confirmDiscardDirty(): boolean {
-    return !state.isDirty || window.confirm("Discard unsaved changes?");
+  function confirmDiscardDirty(message = "Discard unsaved changes?"): Promise<boolean> {
+    if (!isDirtyRef.current) {
+      return Promise.resolve(true);
+    }
+
+    return showConfirmDialog({
+      confirmLabel: "Discard",
+      message,
+      title: "Discard unsaved changes?"
+    });
   }
 
-  function handleClearCanvas(): void {
+  async function handleClearCanvas(): Promise<void> {
     if (documentStats.activeCells === 0) {
       setStatusMessage("Canvas is already empty.");
       return;
     }
 
-    if (!window.confirm("Clear the canvas? This will erase all active subpixels.")) {
+    const shouldClear = await showConfirmDialog({
+      confirmLabel: "Clear",
+      message: "Clear the canvas? This will erase all active subpixels.",
+      title: "Clear canvas?"
+    });
+
+    if (!shouldClear) {
       setStatusMessage("Clear canvas canceled.");
       return;
     }
@@ -594,7 +668,11 @@ export function App(): ReactElement {
     return parsedValue;
   }
 
-  function handleNew(): void {
+  async function handleNew(): Promise<void> {
+    if (!(await confirmDiscardDirty("Create a new image and discard unsaved changes?"))) {
+      return;
+    }
+
     setNewDocumentDraft(DEFAULT_NEW_DOCUMENT_DRAFT);
     setNewDocumentError(null);
     setIsNewDocumentDialogOpen(true);
@@ -614,10 +692,6 @@ export function App(): ReactElement {
       return;
     }
 
-    if (!confirmDiscardDirty()) {
-      return;
-    }
-
     const name = normalizeDocumentName(newDocumentDraft.name);
     actions.newDocument({ name, widthPixels, heightPixels });
     setIsNewDocumentDialogOpen(false);
@@ -626,7 +700,7 @@ export function App(): ReactElement {
   }
 
   async function handleOpen(): Promise<void> {
-    if (!confirmDiscardDirty()) {
+    if (!(await confirmDiscardDirty("Open another file and discard unsaved changes?"))) {
       return;
     }
 
@@ -758,14 +832,11 @@ export function App(): ReactElement {
             </button>
             {activeTopMenu === "file" ? (
               <div className="menu-popover" role="menu">
-                <MenuItem shortcut="Ctrl+N" onClick={() => runMenuAction(handleNew)}>
+                <MenuItem shortcut="Ctrl+N" onClick={() => runAsyncMenuAction(handleNew)}>
                   New Subpixel Image
                 </MenuItem>
                 <MenuItem shortcut="Ctrl+O" onClick={() => runAsyncMenuAction(handleOpen)}>
                   Open...
-                </MenuItem>
-                <MenuItem disabled hasSubmenu>
-                  Open Recent
                 </MenuItem>
                 <MenuSeparator />
                 <MenuItem shortcut="Ctrl+S" onClick={() => runAsyncMenuAction(() => handleSave(false))}>
@@ -774,7 +845,6 @@ export function App(): ReactElement {
                 <MenuItem shortcut="Ctrl+Shift+S" onClick={() => runAsyncMenuAction(() => handleSave(true))}>
                   Save As...
                 </MenuItem>
-                <MenuItem disabled>Save Copy...</MenuItem>
                 <MenuSeparator />
                 <MenuItem
                   disabled={!packedAvailable}
@@ -783,15 +853,6 @@ export function App(): ReactElement {
                 >
                   Export PNG...
                 </MenuItem>
-                <MenuItem disabled>Export Preview Sheet...</MenuItem>
-                <MenuSeparator />
-                <MenuItem disabled>Document Setup...</MenuItem>
-                <MenuItem disabled>Print...</MenuItem>
-                <MenuSeparator />
-                <MenuItem disabled shortcut="Ctrl+W">
-                  Close File
-                </MenuItem>
-                <MenuItem disabled>Exit</MenuItem>
               </div>
             ) : null}
           </div>
@@ -816,30 +877,9 @@ export function App(): ReactElement {
                   Redo
                 </MenuItem>
                 <MenuSeparator />
-                <MenuItem disabled shortcut="Ctrl+X">
-                  Cut
-                </MenuItem>
-                <MenuItem disabled shortcut="Ctrl+C">
-                  Copy
-                </MenuItem>
-                <MenuItem disabled shortcut="Ctrl+V">
-                  Paste
-                </MenuItem>
-                <MenuItem disabled shortcut="Del">
-                  Delete
-                </MenuItem>
-                <MenuSeparator />
-                <MenuItem shortcut="Ctrl+Backspace" onClick={() => runMenuAction(handleClearCanvas)}>
+                <MenuItem shortcut="Ctrl+Backspace" onClick={() => runAsyncMenuAction(handleClearCanvas)}>
                   Clear Canvas
                 </MenuItem>
-                <MenuItem disabled shortcut="Ctrl+A">
-                  Select All
-                </MenuItem>
-                <MenuSeparator />
-                <MenuItem disabled shortcut="Ctrl+F">
-                  Find Subpixels
-                </MenuItem>
-                <MenuItem disabled>Preferences...</MenuItem>
               </div>
             ) : null}
           </div>
@@ -874,9 +914,6 @@ export function App(): ReactElement {
                 <MenuItem shortcut="Ctrl+0" onClick={() => runMenuAction(zoomToDrawing)}>
                   Zoom To Drawing
                 </MenuItem>
-                <MenuItem disabled shortcut="Ctrl+1">
-                  Actual Size
-                </MenuItem>
                 <MenuSeparator />
                 <MenuItem checked={showGrid} shortcut="G" onClick={() => runMenuAction(toggleGrid)}>
                   Grid
@@ -886,11 +923,6 @@ export function App(): ReactElement {
                 </MenuItem>
                 <MenuItem checked={ignoreColor} shortcut="C" onClick={() => runMenuAction(toggleIgnoreColor)}>
                   Ignore Color
-                </MenuItem>
-                <MenuSeparator />
-                <MenuItem disabled>Right Inspector</MenuItem>
-                <MenuItem disabled shortcut="F11">
-                  Full Screen
                 </MenuItem>
               </div>
             ) : null}
@@ -909,11 +941,7 @@ export function App(): ReactElement {
             </button>
             {activeTopMenu === "image" ? (
               <div className="menu-popover" role="menu">
-                <MenuItem disabled>Canvas Size...</MenuItem>
-                <MenuItem disabled>Resize Canvas...</MenuItem>
-                <MenuItem disabled>Trim To Drawing</MenuItem>
-                <MenuSeparator />
-                <MenuItem shortcut="Ctrl+Backspace" onClick={() => runMenuAction(handleClearCanvas)}>
+                <MenuItem shortcut="Ctrl+Backspace" onClick={() => runAsyncMenuAction(handleClearCanvas)}>
                   Clear Canvas
                 </MenuItem>
                 <MenuSeparator />
@@ -921,10 +949,6 @@ export function App(): ReactElement {
                   Insert Calibration Bars
                 </MenuItem>
                 <MenuItem onClick={() => runMenuAction(() => insertPattern("slot-sweep"))}>Insert Slot Sweep</MenuItem>
-                <MenuSeparator />
-                <MenuItem disabled>Flip Horizontal</MenuItem>
-                <MenuItem disabled>Flip Vertical</MenuItem>
-                <MenuItem disabled>Rotate 90 Degrees</MenuItem>
               </div>
             ) : null}
           </div>
@@ -943,10 +967,10 @@ export function App(): ReactElement {
             {activeTopMenu === "tools" ? (
               <div className="menu-popover" role="menu">
                 <MenuItem checked={tool === "brush"} shortcut="B" onClick={() => selectTool("brush")}>
-                  Brush
+                  Draw On
                 </MenuItem>
                 <MenuItem checked={tool === "eraser"} shortcut="E" onClick={() => selectTool("eraser")}>
-                  Cell Eraser
+                  Erase Off
                 </MenuItem>
                 <MenuItem checked={tool === "box-eraser"} shortcut="X" onClick={() => selectTool("box-eraser")}>
                   Box Eraser
@@ -967,9 +991,6 @@ export function App(): ReactElement {
                 <MenuItem checked={tool === "ellipse-fill"} shortcut="I" onClick={() => selectTool("ellipse-fill")}>
                   Filled Ellipse
                 </MenuItem>
-                <MenuSeparator />
-                <MenuItem disabled>Brush Size...</MenuItem>
-                <MenuItem disabled>Intensity...</MenuItem>
               </div>
             ) : null}
           </div>
@@ -1000,8 +1021,6 @@ export function App(): ReactElement {
                 <MenuItem checked={ignoreColor} shortcut="C" onClick={() => runMenuAction(toggleIgnoreColor)}>
                   Ignore Color
                 </MenuItem>
-                <MenuItem disabled>Physical 1:1 Preview</MenuItem>
-                <MenuItem disabled>Display Calibration...</MenuItem>
               </div>
             ) : null}
           </div>
@@ -1019,13 +1038,6 @@ export function App(): ReactElement {
             </button>
             {activeTopMenu === "help" ? (
               <div className="menu-popover menu-popover--align-right" role="menu">
-                <MenuItem disabled shortcut="F1">
-                  Subpix Help
-                </MenuItem>
-                <MenuItem disabled>Keyboard Shortcuts</MenuItem>
-                <MenuItem disabled>.subpix File Format</MenuItem>
-                <MenuSeparator />
-                <MenuItem disabled>Report Issue</MenuItem>
                 <MenuItem onClick={() => runMenuAction(showAbout)}>About Subpix</MenuItem>
               </div>
             ) : null}
@@ -1066,7 +1078,7 @@ export function App(): ReactElement {
       <aside className="left-toolbar" aria-label="Tools">
         <button
           className={tool === "brush" ? "tool-button is-selected" : "tool-button"}
-          title="Brush (B)"
+          title="Draw on (B)"
           aria-pressed={tool === "brush"}
           onClick={() => selectTool("brush")}
         >
@@ -1074,7 +1086,7 @@ export function App(): ReactElement {
         </button>
         <button
           className={tool === "eraser" ? "tool-button is-selected" : "tool-button"}
-          title="Cell eraser (E)"
+          title="Erase off (E)"
           aria-pressed={tool === "eraser"}
           onClick={() => selectTool("eraser")}
         >
@@ -1167,7 +1179,7 @@ export function App(): ReactElement {
             </div>
           ) : null}
         </div>
-        <button className="tool-button" title="Clear canvas" onClick={handleClearCanvas}>
+        <button className="tool-button" title="Clear canvas" onClick={() => void handleClearCanvas()}>
           <Trash2 size={20} />
         </button>
         <div className="toolbar-divider" />
@@ -1431,6 +1443,48 @@ export function App(): ReactElement {
               </button>
             </div>
           </form>
+        </div>
+      ) : null}
+
+      {appDialog ? (
+        <div className="modal-backdrop" role="presentation">
+          <div
+            className="modal modal--app-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="app-dialog-title"
+          >
+            <div className="modal__header">
+              <div>
+                <h2 id="app-dialog-title">{appDialog.title}</h2>
+              </div>
+              <button
+                className="icon-button"
+                type="button"
+                title="Close"
+                onClick={() => closeAppDialog(false)}
+              >
+                <X size={17} />
+              </button>
+            </div>
+
+            <p className="modal__message">{appDialog.message}</p>
+
+            <div className="modal__actions">
+              {appDialog.variant === "confirm" ? (
+                <button className="command-button" type="button" onClick={() => closeAppDialog(false)}>
+                  {appDialog.cancelLabel ?? "Cancel"}
+                </button>
+              ) : null}
+              <button
+                className="command-button command-button--primary"
+                type="button"
+                onClick={() => closeAppDialog(true)}
+              >
+                {appDialog.confirmLabel}
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
 

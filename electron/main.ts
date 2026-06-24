@@ -167,8 +167,8 @@ function buildApplicationMenu(): void {
         commandMenuItem("Undo", "undo", "CommandOrControl+Z"),
         commandMenuItem("Redo", "redo", "CommandOrControl+Y"),
         { type: "separator" },
-        commandMenuItem("Brush", "select-brush"),
-        commandMenuItem("Eraser", "select-eraser"),
+        commandMenuItem("Draw On", "select-brush"),
+        commandMenuItem("Erase Off", "select-eraser"),
         commandMenuItem("Box Eraser", "select-box-eraser"),
         { type: "separator" },
         commandMenuItem("Clear Canvas", "clear", "CommandOrControl+Backspace")

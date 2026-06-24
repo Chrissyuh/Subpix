@@ -159,7 +159,7 @@ export function Site(): ReactElement {
           <article>
             <span>2</span>
             <h3>Draw subpixels</h3>
-            <p>Use brush, cell eraser, box eraser, lines, rectangles, ellipses, grid controls, and undo/redo.</p>
+            <p>Use Draw On, Erase Off, Box Eraser, lines, rectangles, ellipses, grid controls, and undo/redo.</p>
           </article>
           <article>
             <span>3</span>

@@ -52,7 +52,7 @@ Subpix validates and canonicalizes documents before saving so ad hoc runtime fie
 }
 ```
 
-For a 128 x 128 document, each layer's `data` array contains `128 * 3 * 128 = 49152` intensity values. Each value is an integer from 0 to 255. The first editor tools draw in binary values: brush and shapes write 255, while erasers write 0. The format already allows intermediate intensities for later grayscale tools.
+For a 128 x 128 document, each layer's `data` array contains `128 * 3 * 128 = 49152` intensity values. Each value is an integer from 0 to 255. The first editor tools draw in binary values: Draw On and shapes write 255, while Erase Off and Box Eraser write 0. The format already allows intermediate intensities for later grayscale tools.
 
 ## RGB and BGR Compatibility
 
@@ -77,8 +77,8 @@ The right inspector includes compact **Document**, **Display & Export**, and **S
 
 ## Tools
 
-- Brush
-- Cell eraser
+- Draw On
+- Erase Off
 - Box eraser, which previews a red selection box and clears every subpixel inside it on release
 - Lines, with Shift locking to horizontal or vertical 90-degree strokes
 - Rectangle outlines and filled rectangles
@@ -97,8 +97,8 @@ The Image menu can insert deterministic `.subpix` artwork into the active layer,
 
 Useful keyboard binds:
 
-- `B`: brush
-- `E`: cell eraser
+- `B`: Draw On
+- `E`: Erase Off
 - `X`: box eraser
 - `L`: line
 - `R`: rectangle outline
@@ -115,7 +115,7 @@ Useful keyboard binds:
 The Electron build includes native desktop menus for common work:
 
 - **File**: new documents, open, save, save as, and PNG export
-- **Edit**: undo, redo, erasers, brush, and clear canvas
+- **Edit**: undo, redo, Draw On, Erase Off, Box Eraser, and clear canvas
 - **Tools**: shape tools, calibration bars, and slot-sweep pattern insertion
 - **View**: zoom, zoom to drawing, grid, pixel boundaries, and ignore color
 - **Display**: RGB stripe, BGR stripe, and incompatible simulated-only profiles

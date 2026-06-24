@@ -728,7 +728,7 @@ dd {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 20;
+  z-index: 120;
   display: grid;
   place-items: center;
   padding: 24px;
@@ -745,6 +745,10 @@ dd {
   color: #f7f7f7;
   background: #0b0b0b;
   box-shadow: 0 28px 64px rgba(0, 0, 0, 0.82);
+}
+
+.modal--app-dialog {
+  width: min(420px, calc(100vw - 48px));
 }
 
 .modal__header {
@@ -803,6 +807,13 @@ dd {
   color: #ffffff;
   background: #111111;
   font-size: 13px;
+}
+
+.modal__message {
+  margin: 0;
+  color: #d8d8d8;
+  font-size: 13px;
+  line-height: 1.55;
 }
 
 .modal__error {
